@@ -1,4 +1,5 @@
 const swaggerSpec = require("./dist/swagger.json");
+const { Queue } = require("./queue");
 const matchAll = require("match-all");
 
 const generateResponse = (op, obj) => {
@@ -67,12 +68,12 @@ const parseSwaggerRouteData = (swaggerSpec) => {
                 if (!name && dependencies) {
                     throw Error("All routes with dependencies must have a name: " + method + " " + path)
                 }
-                dependencyGraph[name] = dependencies
             }
+            dependencyGraph[name] = { dependencies }
 
             const allowedBodyRoutes = ["post", "put"]
 
-            if(allowedBodyRoutes.includes(method)) {
+            if(allowedBodyRoutes.includes(method) && routes[method]["requestBody"]) {
 
                 const contentTypes = routes[method]["requestBody"]["content"]
 
@@ -83,7 +84,7 @@ const parseSwaggerRouteData = (swaggerSpec) => {
                     body = definitions[definitionName];
                     if (body) {
                         const rawDeps = matchAll(JSON.stringify(body), requestBodyDependencyRegex).toArray()
-                        dependencyGraph[name] = [...dependencies, ...new Set(rawDeps.map(getDependency))]
+                        dependencyGraph[name]["dependencies"] = [...dependencies, ...new Set(rawDeps.map(getDependency))]
                     }
                 }
             }
@@ -95,8 +96,14 @@ const parseSwaggerRouteData = (swaggerSpec) => {
                 "method": method,
             }
             data.push(reqObj);
+
+            if (dependencyGraph[name]) {
+                delete reqObj["dependencies"]
+                dependencyGraph[name]["route"] = reqObj
+            }
         }
     }
+
     dependencyCycleDetection(dependencyGraph)
     satisfyDependencyConstraints(dependencyGraph)
 
@@ -107,7 +114,7 @@ const isCyclicUtil = (graph, node, visited, stack) => {
     visited[node] = true
     stack[node] = true
 
-    for (const neighbour of graph[node]) {
+    for (const neighbour of graph[node]["dependencies"]) {
         if (visited[neighbour] === false) {
             if (isCyclicUtil(graph, neighbour, visited, stack)) {
                 return true
@@ -136,7 +143,7 @@ const dependencyCycleDetection = (dependencyGraph) => {
 const satisfyDependencyConstraints = (dependencyGraph) => {
     const unsatisfiedDependencies = new Set()
     for (const dependency of Object.keys(dependencyGraph)) {
-        for (const key of dependencyGraph[dependency]) {
+        for (const key of dependencyGraph[dependency]["dependencies"]) {
             if (!dependencyGraph[key]) {
                 unsatisfiedDependencies.add(key)
             }
@@ -147,4 +154,54 @@ const satisfyDependencyConstraints = (dependencyGraph) => {
    }
 }
 
-console.log(parseSwaggerRouteData(swaggerSpec))
+const getIndegreeAndAdjacencyList = (dependencyGraph) => {
+    const inDegreeMap = {}
+    const adjList = {}
+
+    for(const node of Object.keys(dependencyGraph)) {
+        inDegreeMap[node] = dependencyGraph[node]["dependencies"].length
+        adjList[node] = []
+    }
+
+    for(const node of Object.keys(dependencyGraph)) {
+        for (const neighbour of dependencyGraph[node]["dependencies"]) {
+            adjList[neighbour].push(node)
+        }
+    }
+
+    return {inDegreeMap, adjList}
+}
+
+const topologicalDependencySort = (dependencyGraph) => {
+    // Kahn's algorithm
+    const {inDegreeMap, adjList} = getIndegreeAndAdjacencyList(dependencyGraph)
+    const dependencyQueue = new Queue()
+
+    for(const _ of Object.keys(dependencyGraph)) {
+        // Check for nodes with zero in-degrees across each iteration
+        // If none are found, there is no solution since all nodes are
+        // cyclically dependant on each other
+        let nonCyclic = false
+
+        let node // Last node with no dependency
+        for(node of Object.keys(dependencyGraph)) {
+            if(inDegreeMap[node] === 0) {
+                nonCyclic = true
+                break
+            }
+        }
+        if (!nonCyclic) {
+            throw Error("Dependencies cannot be sorted, cyclic loop detected")
+        }
+        inDegreeMap[node]--;
+        dependencyQueue.enqueue(node)
+        for (const neighbour of adjList[node]) {
+            inDegreeMap[neighbour]--;
+        }
+    }
+
+    return dependencyQueue
+}
+
+const { dependencyGraph, data } = parseSwaggerRouteData(swaggerSpec)
+console.log(topologicalDependencySort(dependencyGraph))

@@ -46,13 +46,6 @@ router.get(
  *     description: Creates a budget under an organization
  *     tags:
  *       - Budget
- *     requestBody:
- *       description: Details to authenticate
- *       required: true
- *       content:
- *         "application/json":
- *            schema:
- *              $ref: "#/definitions/createBudget"
  *     responses:
  *       201:
  *         description: Budget created successfully
