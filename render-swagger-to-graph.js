@@ -1,16 +1,16 @@
 const swaggerSpec = require("./dist/swagger.json");
 const { Queue } = require("./queue");
 const matchAll = require("match-all");
-const safeEval = require('safe-eval')
+const safeEval = require('safe-eval');
+const {buildSwaggerJSON} = require("./gen-swagger");
 
 const apiExtension = swaggerSpec["servers"][0].url
+const token = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcmdhbml6YXRpb25JRCI6ImJiZTU1MGVhLWQ1NjQtNDA5OS1hMGE1LWJiNjA5NDA1MjlkMSIsInRlbmFudE9yZ0lEIjoiYmJlNTUwZWEtZDU2NC00MDk5LWEwYTUtYmI2MDk0MDUyOWQxIiwicm9sZSI6IlNVUEVSX0FETUlOIiwic3ViIjoiZDY0OGRjN2MtNjhhOS00YjMzLTg5NDktN2JkNWRhYzE2MmIxIiwiYXVkIjoicmVwbGV4X3NlcnZlciIsImlhdCI6MTYwMTI0MjY5NCwiZXhwIjoxNjAzODM0Njk0LCJpc3MiOiJyZXBsZXgifQ.UAJ-0Nk5MqhMoX7nIDEFJOnvYVepPXHHSmsZR7Y0NBkPT3W1zPoXhLXjHqhuXgeyi2WFARgBVhhT7do_YVQwcYJdw5Fg8mf8gC0SKUKl_zH-f841kXimccuOHmqJ75PG0DZH-1kbXR5AGH9GgB0mICYY84TR4IsdeBYVNAaqS9E"
 const axios = require("axios").create({
-    baseURL: "http://localhost:3000" + apiExtension,
+    baseURL: "http://localhost:3100" + apiExtension,
     timeout: 10000,
-    headers: {"X-API-KEY": "somerandomstring"}
+    headers: {"Authorization": `Bearer ${token}`}
 })
-
-const globalResponseCache = {}
 
 const generateResponse = (op, obj) => {
     if(!obj) {
@@ -58,6 +58,11 @@ const parseSwaggerRouteData = (swaggerSpec) => {
             let route = path
             let body = {}
 
+            if(!name) {
+                console.info(`Define name for route: ${method} ${path}`)
+                continue
+            }
+
             if (dependencyGraph[name]) {
                 throw Error("Duplicate dependency name: " + name)
             }
@@ -103,6 +108,7 @@ const parseSwaggerRouteData = (swaggerSpec) => {
                 "dependencies": dependencyGraph[name] || [],
                 "requestBody": body,
                 "apiRoute": route,
+                "originalRoute": path,
                 "method": method,
             }
             data.push(reqObj);
@@ -215,36 +221,50 @@ const topologicalDependencySort = (dependencyGraph) => {
 
 const getResponsesInDependencyOrder = async (dependencyGraph) => {
     const dependencyOrderQueue = topologicalDependencySort(dependencyGraph)
+    const globalResponseCache = {}
 
     while(!dependencyOrderQueue.isEmpty()) {
         const node = dependencyOrderQueue.dequeue()
         const {requestData} = dependencyGraph[node]
         let apiRoute = requestData.apiRoute;
+        let requestBody = JSON.stringify(requestData.requestBody);
 
-        const rawDeps = matchAll(apiRoute, routeDependencyRegex).toArray()
+        const routeDeps = matchAll(apiRoute, routeDependencyRegex).toArray()
         const context = {
             process: process,
             ...globalResponseCache
         }
-        for(const dependency of rawDeps) {
+        for(const dependency of routeDeps) {
             const value = safeEval(dependency.slice(1), context)
             apiRoute = apiRoute.replace(dependency, value)
         }
 
+        const bodyDeps = matchAll(requestBody, routeDependencyRegex).toArray()
+        for(const dependency of bodyDeps) {
+            const value = safeEval(dependency.slice(1), context)
+            requestBody = requestBody.replace(dependency, value)
+        }
+
         const response = await axios.request({
             method: requestData.method,
-            data: requestData.requestBody,
+            data: JSON.parse(requestBody),
             url: apiRoute
         }).catch((response) => {
             console.log(response.config)
         })
+
         if(200 <= response.status <= 400) {
-            globalResponseCache[node] = response.data;
-        } else {
-            console.info("Request failed: " + JSON.stringify(response.config))
+            globalResponseCache[node] = response.data.data;
+            const responseTypes = swaggerSpec["paths"][requestData.originalRoute][requestData.method]["responses"][response.status]["content"];
+            for(const responseType of Object.keys(responseTypes)) {
+                const responseRef = responseTypes[responseType]["schema"]["$ref"].split("/").slice(-1)
+                // console.log(response.data)
+                //swaggerSpec["definitions"][responseRef] = buildSwaggerJSON(response.data)
+            }
         }
     }
-    console.log(globalResponseCache)
+
+    return swaggerSpec
 }
 
 (async() => {

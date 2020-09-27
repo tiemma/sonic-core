@@ -138,6 +138,7 @@ try {
 
 module.exports = {
     generateSwaggerDoc,
+    buildSwaggerJSON,
     hasOnlyOneSimilarElement,
     isEmpty,
     getType,

@@ -46,6 +46,13 @@ router.get(
  *     description: Creates a budget under an organization
  *     tags:
  *       - Budget
+ *     requestBody:
+ *       description: Details to authenticate
+ *       required: true
+ *       content:
+ *         "application/json":
+ *            schema:
+ *              $ref: "#/definitions/createBudget"
  *     responses:
  *       201:
  *         description: Budget created successfully
@@ -106,6 +113,32 @@ router.get("/organizations", (req: Request, res: Response) => {
     return res.json([{"id": "bbe550ea-d564-4099-a0a5-bb60940529d1"}])
 });
 
+/**
+ * @swagger
+ * /clusters:
+ *   get:
+ *     name: Cluster
+ *     summary: Get clusters
+ *     description: Gets all clusters for the user's organization
+ *     tags:
+ *       - Cluster
+ *       - External
+ *     responses:
+ *       200:
+ *         description: Clusters retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/definitions/getClustersByOrganizationResp'
+ *       400:
+ *         description: Missing parameter in request body
+ *       401:
+ *         description: Token not provided
+ */
+router.get("/clusters", (req: Request, res: Response) => {
+    console.log(req.params)
+    return res.json([{"id": "bbe550ea-d564-4099-a0a5-bb60940529d1"}])
+});
 app.use("/api/v1", router);
 app.listen(3000, () => {
     console.info("Express server started on port");
