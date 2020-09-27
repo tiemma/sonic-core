@@ -31,8 +31,8 @@ const app = express();
  */
 router.get(
     "/budgets/:budgetID",
-    (req: Request, _: Response) => {
-        return {"id": req.params.id}
+    (req: Request, res: Response) => {
+        return res.json({"id": req.params.budgetID})
     }
 );
 
@@ -70,11 +70,11 @@ router.get(
  *       schema:
  *         $ref: "#/definitions/pathID"
  */
-router.get(
+router.post(
     "/organizations/:id/budgets",
-    (req: Request, _: Response) => {
+    (req: Request, res: Response) => {
         console.log(req.params)
-        return {"id": "Hello world"}
+        return res.json({"id": req.params.id})
     }
 );
 

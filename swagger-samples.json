@@ -13,7 +13,7 @@
       "teams": ["$Team.id"],
       "alerts": {
         "emails": ["me@bakman.build"],
-        "teams": ["$Team.id"],
+        "teams": ["$Teams.id"],
         "users": ["$User.id"]
       }
     }

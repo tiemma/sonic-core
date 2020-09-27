@@ -1,6 +1,7 @@
 const swaggerSpec = require("./dist/swagger.json");
 const { Queue } = require("./queue");
 const matchAll = require("match-all");
+const safeEval = require('safe-eval')
 
 const apiExtension = swaggerSpec["servers"][0].url
 const axios = require("axios").create({
@@ -38,6 +39,8 @@ const getDefinitions = (swaggerSpec) => {
 
 const parameterRegex = /{(\w+)}+/g
 const requestBodyDependencyRegex = /("\$\w+(((\[\w+\])+)?|((\.\w+)+)?)+")/g
+const routeDependencyRegex = /(\$\w+(((\[\w+\])+)?|((\.\w+)+)?)+)/g
+const getDependency = (deps) => deps.slice(1).match(/\w+/)[0]
 const parseSwaggerRouteData = (swaggerSpec) => {
     const definitions = getDefinitions(swaggerSpec)
     const paths = swaggerSpec["paths"]
@@ -47,8 +50,6 @@ const parseSwaggerRouteData = (swaggerSpec) => {
     for(const path of Object.keys(paths)) {
         const routes = paths[path]
         let dependencies = []
-
-        const getDependency = (deps) => deps.slice(1).match(/\w+/)[0]
 
         for(const method of Object.keys(routes)) {
             const name = routes[method]["name"]
@@ -218,10 +219,22 @@ const getResponsesInDependencyOrder = async (dependencyGraph) => {
     while(!dependencyOrderQueue.isEmpty()) {
         const node = dependencyOrderQueue.dequeue()
         const {requestData} = dependencyGraph[node]
+        let apiRoute = requestData.apiRoute;
+
+        const rawDeps = matchAll(apiRoute, routeDependencyRegex).toArray()
+        const context = {
+            process: process,
+            ...globalResponseCache
+        }
+        for(const dependency of rawDeps) {
+            const value = safeEval(dependency.slice(1), context)
+            apiRoute = apiRoute.replace(dependency, value)
+        }
+
         const response = await axios.request({
             method: requestData.method,
             data: requestData.requestBody,
-            url: requestData.apiRoute
+            url: apiRoute
         }).catch((response) => {
             console.log(response.config)
         })
@@ -230,8 +243,8 @@ const getResponsesInDependencyOrder = async (dependencyGraph) => {
         } else {
             console.info("Request failed: " + JSON.stringify(response.config))
         }
-        console.log(globalResponseCache)
     }
+    console.log(globalResponseCache)
 }
 
 (async() => {
