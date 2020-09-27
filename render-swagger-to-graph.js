@@ -2,6 +2,15 @@ const swaggerSpec = require("./dist/swagger.json");
 const { Queue } = require("./queue");
 const matchAll = require("match-all");
 
+const apiExtension = swaggerSpec["servers"][0].url
+const axios = require("axios").create({
+    baseURL: "http://localhost:3000" + apiExtension,
+    timeout: 10000,
+    headers: {"X-API-KEY": "somerandomstring"}
+})
+
+const globalResponseCache = {}
+
 const generateResponse = (op, obj) => {
     if(!obj) {
         return op
@@ -99,7 +108,7 @@ const parseSwaggerRouteData = (swaggerSpec) => {
 
             if (dependencyGraph[name]) {
                 delete reqObj["dependencies"]
-                dependencyGraph[name]["route"] = reqObj
+                dependencyGraph[name]["requestData"] = reqObj
             }
         }
     }
@@ -203,5 +212,29 @@ const topologicalDependencySort = (dependencyGraph) => {
     return dependencyQueue
 }
 
-const { dependencyGraph, data } = parseSwaggerRouteData(swaggerSpec)
-console.log(topologicalDependencySort(dependencyGraph))
+const getResponsesInDependencyOrder = async (dependencyGraph) => {
+    const dependencyOrderQueue = topologicalDependencySort(dependencyGraph)
+
+    while(!dependencyOrderQueue.isEmpty()) {
+        const node = dependencyOrderQueue.dequeue()
+        const {requestData} = dependencyGraph[node]
+        const response = await axios.request({
+            method: requestData.method,
+            data: requestData.requestBody,
+            url: requestData.apiRoute
+        }).catch((response) => {
+            console.log(response.config)
+        })
+        if(200 <= response.status <= 400) {
+            globalResponseCache[node] = response.data;
+        } else {
+            console.info("Request failed: " + JSON.stringify(response.config))
+        }
+        console.log(globalResponseCache)
+    }
+}
+
+(async() => {
+    const {dependencyGraph} = parseSwaggerRouteData(swaggerSpec)
+    console.log(await getResponsesInDependencyOrder(dependencyGraph))
+})()

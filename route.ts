@@ -31,7 +31,7 @@ const app = express();
  */
 router.get(
     "/budgets/:budgetID",
-    (req: Request, res: Response) => {
+    (req: Request, _: Response) => {
         return {"id": req.params.id}
     }
 );
@@ -72,7 +72,8 @@ router.get(
  */
 router.get(
     "/organizations/:id/budgets",
-    (req: Request, res: Response) => {
+    (req: Request, _: Response) => {
+        console.log(req.params)
         return {"id": "Hello world"}
     }
 );
@@ -100,8 +101,9 @@ router.get(
  *       403:
  *         description: Super Admin privileges required
  */
-router.get("/", (req: Request, res: Response) => {
-    return [{"id": "bbe550ea-d564-4099-a0a5-bb60940529d1"}]
+router.get("/organizations", (req: Request, res: Response) => {
+    console.log(req.params)
+    return res.json([{"id": "bbe550ea-d564-4099-a0a5-bb60940529d1"}])
 });
 
 app.use("/api/v1", router);
