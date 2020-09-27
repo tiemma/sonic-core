@@ -1,0 +1,21 @@
+{
+  "budget": {
+    "createBudget": {
+      "budget": {
+        "name": "Budget",
+        "amount": 100,
+        "type": "RECURRING",
+        "monthlyDuration": 2,
+        "target": "CLUSTER",
+        "isPrevMonthCost": true
+      },
+      "clusters": ["$Cluster.id"],
+      "teams": ["$Team.id"],
+      "alerts": {
+        "emails": ["me@bakman.build"],
+        "teams": ["$Team.id"],
+        "users": ["$User.id"]
+      }
+    }
+  }
+}

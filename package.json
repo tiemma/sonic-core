@@ -1,0 +1,21 @@
+{
+  "name": "swaggerresponse",
+  "version": "1.0.0",
+  "description": "Generates the responses for swagger based on pre-filled json responses",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "swagger",
+    "docs",
+    "responses"
+  ],
+  "author": "Emmanuel Bakare",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1",
+    "match-all": "^1.2.6",
+    "swagger-jsdoc": "^4.2.0"
+  }
+}
