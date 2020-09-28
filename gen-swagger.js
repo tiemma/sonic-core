@@ -59,7 +59,8 @@ const getType = (obj) => {
         .toLowerCase();
 };
 
-const buildSwaggerJSON = (data) => {
+const
+    buildSwaggerJSON = (data) => {
     const keys = Object.keys(data);
     const op = {
         required: keys,
