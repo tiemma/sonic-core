@@ -54,7 +54,7 @@ router.get(
  *            schema:
  *              $ref: "#/definitions/createBudget"
  *     responses:
- *       201:
+ *       200:
  *         description: Budget created successfully
  *         content:
  *           application/json:
@@ -73,7 +73,7 @@ router.get(
  *       in: path
  *       description: Organization ID
  *       required: true
- *       defaultTemplate: $Organization[0].id
+ *       defaultTemplate: $Cluster[0].id
  *       schema:
  *         $ref: "#/definitions/pathID"
  */
