@@ -4,16 +4,16 @@ class Queue {
     }
 
     enqueue(node) {
-        this.elements.push(node)
+        this.elements.push(node);
     }
 
     dequeue() {
-        return this.elements.shift()
+        return this.elements.shift();
     }
 
     isEmpty() {
-        return this.elements.length === 0
+        return this.elements.length === 0;
     }
 }
 
-module.exports = { Queue }
+module.exports = {Queue}

@@ -1,6 +1,7 @@
 const fs = require("fs");
 const swaggerJSDoc = require("swagger-jsdoc");
 const { options } = require("./swagger-config.js");
+const {swaggerResponse} = require("./main");
 
 const hasOnlyOneSimilarElement = (haystack, needle) => {
     let count = 0;
@@ -47,6 +48,7 @@ const generateSwaggerDoc = (tagsToKeep, suffix) => {
 
     let path = suffix ? `./dist/swagger-${suffix}.json` : `./dist/swagger.json`;
     swaggerSpec = addDefinitions(swaggerSpec);
+    swaggerSpec = swaggerResponse(swaggerSpec);
     fs.writeFileSync(path, JSON.stringify(swaggerSpec, null, 4));
 
     return swaggerSpec;
@@ -59,8 +61,7 @@ const getType = (obj) => {
         .toLowerCase();
 };
 
-const
-    buildSwaggerJSON = (data) => {
+const buildSwaggerJSON = (data) => {
     const keys = Object.keys(data);
     const op = {
         required: keys,
