@@ -198,6 +198,6 @@ app.use(
     swaggerUI.setup(swaggerSpec, {}, {}, customCss)
 );
 
-app.listen(3000, () => {
+app.listen(3100, () => {
     console.info("Express server started on port");
 });

@@ -3,22 +3,38 @@ const {topologicalDependencySort} = require("./graph-utils")
 
 const _cache = {}
 
+const swaggerRef = (contentType, responseRef) => {
+    return {
+        content: {
+            [contentType]: {
+                schema: {
+                    "$ref": responseRef
+                }
+            }
+        }
+    }
+}
+
 const setResponse = (swaggerSpec, node, requestData, response, dataPath) => {
     const responseTypes = swaggerSpec["paths"][requestData.originalRoute][requestData.method]["responses"][response.status];
+    const contentType = response.headers["content-type"].split(";")[0];
+    let responseRef = Math.random().toString(36).substring(7);
+    let data = response.data;
 
     if (!responseTypes) {
-        throw Error("Response code not documented in swagger: " + response.status)
+        console.log("Response code not documented in swagger: " + response.status)
+
+        swaggerSpec["paths"][requestData.originalRoute][requestData.method]["responses"][response.status] = swaggerRef(contentType, responseRef)
+    } else {
+        responseRef = responseTypes["content"][contentType]["schema"]["$ref"].split("/").slice(-1)
     }
 
-    for(const responseType of Object.keys(responseTypes["content"])) {
-        const responseRef = responseTypes["content"][responseType]["schema"]["$ref"].split("/").slice(-1)
-        let data = response.data;
-        for (const path of dataPath) {
-            data = data[path];
-        }
-        _cache[node] = data;
-        swaggerSpec["definitions"][responseRef] = buildSwaggerJSON(data);
+    for (const path of dataPath) {
+        data = data[path];
     }
+
+    _cache[node] = data;
+    swaggerSpec["definitions"][responseRef] = buildSwaggerJSON(data);
 }
 
 const getResponsesInDependencyOrder = async (swaggerSpec, requestOptions = {}, bodyDefinitions = {}, dataPath = []) => {
@@ -52,8 +68,10 @@ const getResponsesInDependencyOrder = async (swaggerSpec, requestOptions = {}, b
                 setResponse(swaggerSpec, node, requestData, response, dataPath)
         })
             .catch((response) => {
-                if(response.isAxiosError) {
+                if(response.response) {
                     setResponse(swaggerSpec, node, requestData, response.response, dataPath)
+                } else {
+                    throw Error(`Error occurred querying route for dependency ${node} on ${requestData.method.toUpperCase()} ${apiRoute}`)
                 }
         });
     }
