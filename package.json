@@ -15,7 +15,10 @@
   "license": "ISC",
   "dependencies": {
     "axios": "^0.20.0",
+    "chalk": "^4.1.0",
+    "commander": "^6.1.0",
     "express": "^4.17.1",
+    "figlet": "^1.5.0",
     "match-all": "^1.2.6",
     "openapi-types": "^7.0.1",
     "safe-eval": "^0.4.1",
