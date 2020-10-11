@@ -5,26 +5,31 @@ const commaSeparatedList = (value) => value.split(',');
 
 // async by default since certain configs would
 // require promise related calls
-async function verifyFileIsRequirable(path) {
+const verifyFileIsRequirable = async (path) => {
   if (!path) {
-    return;
+    return '';
   }
   try {
-    path = resolve(path);
-    console.log(`Attempting to require file at path ${path}`);
-    return await require(path);
+    const resolvedPath = resolve(path);
+    // eslint-disable-next-line no-console
+    console.log(`Attempting to require file at path ${resolvedPath}`);
+    // eslint-disable-next-line global-require,import/no-dynamic-require
+    return require(resolvedPath);
   } catch (e) {
     throw Error(`File at ${path} must exist and be require-able`);
   }
-}
+};
 
 const createFileIfNotExists = (path) => {
   if (!path) {
+    // eslint-disable-next-line no-console
     console.log('Swagger response would be written to consoles standard output');
-    return;
+    return '';
   }
   ensureFileSync(path);
   return path;
 };
 
-module.exports = { commaSeparatedList, verifyFileIsRequirable, createFileIfNotExists };
+module.exports = {
+  commaSeparatedList, verifyFileIsRequirable, createFileIfNotExists,
+};

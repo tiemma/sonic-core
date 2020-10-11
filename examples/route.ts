@@ -123,7 +123,7 @@ router.get(
  *       in: path
  *       description: Organization ID
  *       required: true
- *       defaultTemplate: $Cluster[0].id
+ *       defaultTemplate: $Organization[0].id
  *       schema:
  *         $ref: "#/definitions/pathID"
  */

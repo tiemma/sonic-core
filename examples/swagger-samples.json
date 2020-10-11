@@ -316,7 +316,7 @@
         "target": "CLUSTER",
         "isPrevMonthCost": true
       },
-      "clusters": ["1b310f81-e49e-48fa-ae8c-3a7c29ca034e"],
+      "clusters": ["$Cluster[0].id"],
       "alerts": {
         "emails": ["me@bakman.build"],
         "teams": ["1b310f81-e49e-48fa-ae8c-3a7c29ca034e"],

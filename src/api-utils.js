@@ -23,17 +23,18 @@ const setResponse = (swaggerSpec, node, requestData, response, dataPath) => {
   let { data } = response;
 
   if (!responseTypes) {
-    console.log(`Response code not documented in swagger: ${response.status}`);
+    process.log(`Response code <${response.status}> not documented in swagger, adding under definition ${responseRef}`);
 
     // eslint-disable-next-line max-len
     swaggerSpec.paths[requestData.originalRoute][requestData.method].responses[response.status] = swaggerRef(contentType, responseRef);
   } else {
     responseRef = responseTypes.content[contentType].schema.$ref.split('/').slice(-1);
+    process.log(`Response code <${response.status}> documented in swagger, adding under definition ${responseRef}`);
   }
 
-  dataPath.forEach((path) => {
+  for (const path of dataPath) {
     data = data[path];
-  });
+  }
 
   cache[node] = data;
   swaggerSpec.definitions[responseRef] = buildSwaggerJSON(data);
@@ -49,15 +50,20 @@ const getResponsesInDependencyOrder = async (swaggerSpec,
 
   const axios = create(requestOptions);
 
+  process.log(`Iterating over queue in required order: ${dependencyOrderQueue.getElements()}`);
   while (!dependencyOrderQueue.isEmpty()) {
     const node = dependencyOrderQueue.dequeue();
     const { requestData } = dependencyGraph[node];
+    process.log(`Processing node ${node} with details: ${requestData.method.toUpperCase()} ${requestData.originalRoute}`);
 
     const context = {
       process,
       ...cache,
     };
+    process.log(`Evaluating route data ${requestData.apiRoute}`);
     const apiRoute = evaluateRoute(requestData.apiRoute, context);
+
+    process.log('Evaluating body data: <content omitted>');
     const requestBody = evaluateRoute(JSON.stringify(requestData.requestBody), context);
 
     if (['post', 'put'].includes(requestData.method)) {
@@ -77,11 +83,18 @@ const getResponsesInDependencyOrder = async (swaggerSpec,
         if (response.response) {
           setResponse(swaggerSpec, node, requestData, response.response, dataPath);
         } else {
-          throw Error(`Error occurred querying route for dependency ${node} on ${requestData.method.toUpperCase()} ${apiRoute}`);
+          throw Error(
+            `Error occurred querying route for dependency ${node}
+               on ${requestData.method.toUpperCase()} ${apiRoute}`,
+          );
         }
       });
+
+    process.log(`Successfully processed API call on node ${node}`);
+    process.log('-');
   }
 
+  process.log('Swagger response generation completed');
   return { swaggerSpec, bodyDefinitions };
 };
 

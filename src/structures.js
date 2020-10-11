@@ -3,6 +3,10 @@ class Queue {
     this.elements = [];
   }
 
+  getElements() {
+    return this.elements;
+  }
+
   enqueue(node) {
     this.elements.push(node);
   }

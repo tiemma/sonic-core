@@ -5,6 +5,17 @@ const {
 } = require('./regex-utils');
 const { satisfyDependencyConstraints, dependencyCycleDetection } = require('./graph-utils');
 
+const getType = (obj) => ({}.toString
+  .call(obj)
+  .match(/\s([a-zA-Z]+)/)[1]
+  .toLowerCase());
+
+const DataTypes = {
+  ARRAY: 'array',
+  OBJECT: 'object',
+  NULL: 'null',
+};
+
 const generateResponse = (op, obj) => {
   if (!obj) {
     return op;
@@ -20,6 +31,76 @@ const generateResponse = (op, obj) => {
           break;
         default:
           op[key] = obj[key].example;
+      }
+    }
+  }
+  return op;
+};
+
+const buildSwaggerJSON = (data) => {
+  const keys = Object.keys(data);
+  const op = {
+    required: keys,
+    properties: {},
+  };
+
+  if (getType(data) === DataTypes.ARRAY) {
+    const { properties } = buildSwaggerJSON(data[0]);
+    op.type = DataTypes.ARRAY;
+    op.items = {
+      type: getType(data[0]),
+      properties,
+    };
+    op.required = Object.keys(properties);
+    op.example = data;
+    return op;
+  }
+
+  for (const key of keys) {
+    const value = data[key];
+    let typeData = getType(value);
+    const nonSingularTypes = [DataTypes.ARRAY, DataTypes.OBJECT, DataTypes.NULL];
+
+    if (!nonSingularTypes.includes(typeData)) {
+      op.properties[key] = {
+        type: typeData,
+      };
+      op.properties[key].example = value;
+    } else {
+      switch (typeData) {
+        case DataTypes.ARRAY:
+          typeData = getType(data[key][0]);
+          if (typeData === DataTypes.ARRAY) {
+            throw new Error(
+              'Complex object (array of array etc...)',
+              data[key][0],
+            );
+          }
+          if (typeData === DataTypes.OBJECT) {
+            op.properties[key] = {
+              type: DataTypes.ARRAY,
+              items: {
+                type: typeData,
+                properties: buildSwaggerJSON(data[key][0]).properties,
+              },
+            };
+            break;
+          }
+          op.properties[key] = {
+            type: DataTypes.ARRAY,
+            items: {
+              type: typeData,
+            },
+          };
+          op.properties[key].example = value;
+          break;
+        case DataTypes.OBJECT:
+          op.properties[key] = buildSwaggerJSON(data[key]);
+          op.properties[key].type = DataTypes.OBJECT;
+          break;
+        default:
+          process.log(`skipping ${typeData}`);
+          break;
       }
     }
   }
@@ -100,6 +181,7 @@ const addDefinitions = (bodyDefinitions, swaggerSpec = {}) => {
 };
 
 const parseSwaggerRouteData = (swaggerSpec, bodyDefinitions) => {
+  process.log('Generating JSON object representing decomposed swagger definitions');
   const definitions = { ...getDefinitions(swaggerSpec), ...bodyDefinitions };
   const { paths } = swaggerSpec;
   const dependencyGraph = {};
@@ -108,22 +190,33 @@ const parseSwaggerRouteData = (swaggerSpec, bodyDefinitions) => {
     const routes = paths[path];
 
     for (const method of Object.keys(routes)) {
+      process.log(`Parsing documentation under ${method.toUpperCase()} ${path}`);
       const { name } = routes[method];
 
       if (!name) {
-        continue;
-        throw Error(`Define name for route: ${method} ${path}`);
+        throw Error(`Define name for route: ${method.toUpperCase()} ${path}`);
       }
 
       if (dependencyGraph[name]) {
         throw Error(`Duplicate dependency name: ${name}`);
       }
 
-      const { route, dependencies: parameterDependencies } = getParameterDependencies(path, method, routes[method].parameters, name);
+      process.log('Obtaining parameter dependencies');
+      const {
+        route,
+        dependencies: parameterDependencies,
+      } = getParameterDependencies(path, method, routes[method].parameters, name);
 
-      const { body, definitionName, dependencies: bodyDependencies } = getBodyDependencies(routes, method, definitions);
+      process.log('Obtaining request body dependencies');
+      const {
+        body,
+        definitionName,
+        dependencies: bodyDependencies,
+      } = getBodyDependencies(routes, method, definitions);
 
-      const dependencies = Array.from(new Set([...parameterDependencies, ...bodyDependencies]).values());
+      const dependencies = Array.from(
+        new Set([...parameterDependencies, ...bodyDependencies]).values(),
+      );
       dependencyGraph[name] = { dependencies };
 
       const reqObj = {
@@ -140,6 +233,9 @@ const parseSwaggerRouteData = (swaggerSpec, bodyDefinitions) => {
       if (dependencyGraph[name]) {
         dependencyGraph[name].requestData = reqObj;
       }
+
+      process.log(`Successfully obtained dependencies for node ${name}`);
+      process.log('-');
     }
   }
 
@@ -147,87 +243,6 @@ const parseSwaggerRouteData = (swaggerSpec, bodyDefinitions) => {
   dependencyCycleDetection(dependencyGraph);
 
   return { dependencyGraph };
-};
-
-const getType = (obj) => ({}.toString
-  .call(obj)
-  .match(/\s([a-zA-Z]+)/)[1]
-  .toLowerCase());
-
-const DataTypes = {
-  ARRAY: 'array',
-  OBJECT: 'object',
-  NULL: 'null',
-};
-
-const buildSwaggerJSON = (data) => {
-  const keys = Object.keys(data);
-  const op = {
-    required: keys,
-    properties: {},
-  };
-
-  if (getType(data) === DataTypes.ARRAY) {
-    const { properties } = buildSwaggerJSON(data[0]);
-    op.type = DataTypes.ARRAY;
-    op.items = {
-      type: getType(data[0]),
-      properties,
-    };
-    op.required = Object.keys(properties);
-    op.example = data;
-    return op;
-  }
-
-  for (const key of keys) {
-    const value = data[key];
-    let typeData = getType(value);
-    const nonSingularTypes = [DataTypes.ARRAY, DataTypes.OBJECT, DataTypes.NULL];
-    if (!nonSingularTypes.includes(typeData)) {
-      op.properties[key] = {
-        type: typeData,
-      };
-      op.properties[key].example = value;
-      continue;
-    }
-
-    switch (typeData) {
-      case DataTypes.ARRAY:
-        typeData = getType(data[key][0]);
-        if (typeData === DataTypes.ARRAY) {
-          throw new Error(
-            'Complex object (array of array etc...)',
-            data[key][0],
-          );
-        }
-        if (typeData === DataTypes.OBJECT) {
-          op.properties[key] = {
-            type: DataTypes.ARRAY,
-            items: {
-              type: typeData,
-              properties: buildSwaggerJSON(data[key][0]).properties,
-            },
-          };
-          break;
-        }
-        op.properties[key] = {
-          type: DataTypes.ARRAY,
-          items: {
-            type: typeData,
-          },
-        };
-        op.properties[key].example = value;
-        break;
-      case DataTypes.OBJECT:
-        op.properties[key] = buildSwaggerJSON(data[key]);
-        op.properties[key].type = DataTypes.OBJECT;
-        break;
-      default:
-        console.warn('skipping ', typeData);
-        break;
-    }
-  }
-  return op;
 };
 
 module.exports = {
