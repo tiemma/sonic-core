@@ -46,8 +46,7 @@ const options = {
     // import swaggerDefinitions
     swaggerDefinition,
     // path to the API docs
-    // apis: ["/home/bakman/WebstormProjects/server/**/*.ts"],
-    apis: ["*.ts"],
+    apis: ["examples/*.ts"],
 };
 
 module.exports = options;
