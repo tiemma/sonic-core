@@ -1,7 +1,6 @@
 import React, {Component} from 'react';
 import './App.css';
 import Graph from "react-graph-vis";
-import cloneDeep from "lodash/cloneDeep";
 import Colors from "./Colors";
 import Node from "./images/node.png"
 import Edge from "./images/edge.png"
@@ -47,7 +46,7 @@ class App extends Component {
         const edges = [];
         for(const node of Object.keys(dependencyGraph)) {
             for (const neighbour of dependencyGraph[node].dependencies) {
-                const state = {from: node, to: neighbour}
+                const state = {to: node, from: neighbour}
                 if(!dependencyGraph[neighbour]) {
                     state.dashes = true
                 }
@@ -72,7 +71,7 @@ class App extends Component {
         this.ws.onmessage = (event) => {
             const metrics = JSON.parse(event.data);
             console.log(metrics)
-            const state = cloneDeep(this.state);
+            const state = {...this.state}
             state.nodes = [
                 ...this.generateNodesList(metrics.dependencyGraph),
                 ...this.generateUnsatisfiedNodeList(metrics.unsatisfiedDependencies)
