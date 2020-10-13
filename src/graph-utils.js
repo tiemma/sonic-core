@@ -23,23 +23,21 @@ const isCyclicUtil = (graph, node, visited, stack, history = []) => {
 
 const dependencyCycleDetection = (dependencyGraph) => {
   // Converted to JS from here: https://www.geeksforgeeks.org/detect-cycle-in-a-graph/
-  process.log('Verifying there are no cyclic dependency chains');
   const visited = {};
   const stack = {};
+  const stackHistory = [];
   for (const node of Object.keys(dependencyGraph)) {
     if (!visited[node]) {
       const cycleData = isCyclicUtil(dependencyGraph, node, visited, stack);
       if (cycleData.status) {
-        throw Error(`Cyclic detection found on route: ${[node, ...cycleData.stackHistory].join('->')}`);
+        stackHistory.push([node, ...cycleData.stackHistory]);
       }
     }
   }
-  process.log('No cyclic dependency chains were detected');
-  process.log('-');
+  return { status: stackHistory.length > 0, stackHistory };
 };
 
 const satisfyDependencyConstraints = (dependencyGraph) => {
-  process.log('Verifying all dependencies are satified in the dependency graph');
   const unsatisfiedDependencies = new Set();
   for (const dependency of Object.keys(dependencyGraph)) {
     for (const key of dependencyGraph[dependency].dependencies) {
@@ -48,15 +46,11 @@ const satisfyDependencyConstraints = (dependencyGraph) => {
       }
     }
   }
-  if (unsatisfiedDependencies.size) {
-    throw Error(`Dependencies are not satisfied: ${Array.from(unsatisfiedDependencies.values())}`);
-  }
-  process.log('Successfully verified all dependencies are satisfied based on current swagger configuration 🎉');
-  process.log('-');
+  return Array.from(unsatisfiedDependencies.values());
 };
 
 const getIndegreeAndAdjacencyList = (dependencyGraph) => {
-  process.log('Generating in-degree map and adjacency list off dependency graph');
+  global.log('Generating in-degree map and adjacency list off dependency graph');
   const inDegreeMap = {};
   const adjList = {};
 
@@ -71,14 +65,14 @@ const getIndegreeAndAdjacencyList = (dependencyGraph) => {
     }
   }
 
-  process.log('Completed generation of in-degree map and adjacency list');
-  process.log('-');
+  global.log('Completed generation of in-degree map and adjacency list');
+  global.log('-');
   return { inDegreeMap, adjList };
 };
 
 const topologicalDependencySort = (dependencyGraph) => {
   // Kahn's algorithm
-  process.log('Starting sorting process for correct dependency API call order');
+  global.log('Starting sorting process for correct dependency API call order');
   const { inDegreeMap, adjList } = getIndegreeAndAdjacencyList(dependencyGraph);
   const dependencyQueue = new Queue();
 
@@ -106,8 +100,8 @@ const topologicalDependencySort = (dependencyGraph) => {
     }
   });
 
-  process.log('Completed sorting of dependencies, proceeding to API call process...');
-  process.log('-');
+  global.log('Completed sorting of dependencies, proceeding to API call process...');
+  global.log('-');
   return dependencyQueue;
 };
 

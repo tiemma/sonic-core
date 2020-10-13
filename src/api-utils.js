@@ -1,4 +1,5 @@
 const { create } = require('axios');
+const { dependencyCycleDetection, satisfyDependencyConstraints } = require('./graph-utils');
 
 const { parseSwaggerRouteData, evaluateRoute, buildSwaggerJSON } = require('./swagger-utils');
 const { topologicalDependencySort } = require('./graph-utils');
@@ -23,13 +24,13 @@ const setResponse = (swaggerSpec, node, requestData, response, dataPath) => {
   let { data } = response;
 
   if (!responseTypes) {
-    process.log(`Response code <${response.status}> not documented in swagger, adding under definition ${responseRef}`);
+    global.log(`Response code <${response.status}> not documented in swagger, adding under definition ${responseRef}`);
 
     // eslint-disable-next-line max-len
     swaggerSpec.paths[requestData.originalRoute][requestData.method].responses[response.status] = swaggerRef(contentType, responseRef);
   } else {
     responseRef = responseTypes.content[contentType].schema.$ref.split('/').slice(-1);
-    process.log(`Response code <${response.status}> documented in swagger, adding under definition ${responseRef}`);
+    global.log(`Response code <${response.status}> documented in swagger, adding under definition ${responseRef}`);
   }
 
   for (const path of dataPath) {
@@ -46,24 +47,40 @@ const getResponsesInDependencyOrder = async (swaggerSpec,
   dataPath = []) => {
   const { dependencyGraph } = parseSwaggerRouteData(swaggerSpec, bodyDefinitions);
 
+  global.log('Verifying all dependencies are satisfied in the dependency graph');
+  const unsatisfiedDependencies = satisfyDependencyConstraints(dependencyGraph);
+  if (unsatisfiedDependencies.length) {
+    throw Error(`Dependencies are not satisfied: ${unsatisfiedDependencies}`);
+  }
+  global.log('Successfully verified all dependencies are satisfied based on current swagger configuration 🎉');
+  global.log('-');
+
+  global.log('Verifying there are no cyclic dependency chains');
+  const cycleData = dependencyCycleDetection(dependencyGraph);
+  if (cycleData.status) {
+    throw Error(`Cyclic detection found on route: \n${cycleData.stackHistory.map((history) => history.join('->')).join('\n')}`);
+  }
+  global.log('No cyclic dependency chains were detected');
+  global.log('-');
+
   const dependencyOrderQueue = topologicalDependencySort(dependencyGraph);
 
   const axios = create(requestOptions);
 
-  process.log(`Iterating over queue in required order: ${dependencyOrderQueue.getElements()}`);
+  global.log(`Iterating over queue in required order: ${dependencyOrderQueue.getElements()}`);
   while (!dependencyOrderQueue.isEmpty()) {
     const node = dependencyOrderQueue.dequeue();
     const { requestData } = dependencyGraph[node];
-    process.log(`Processing node ${node} with details: ${requestData.method.toUpperCase()} ${requestData.originalRoute}`);
+    global.log(`Processing node ${node} with details: ${requestData.method.toUpperCase()} ${requestData.originalRoute}`);
 
     const context = {
       process,
       ...cache,
     };
-    process.log(`Evaluating route data ${requestData.apiRoute}`);
+    global.log(`Evaluating route data ${requestData.apiRoute}`);
     const apiRoute = evaluateRoute(requestData.apiRoute, context);
 
-    process.log('Evaluating body data: <content omitted>');
+    global.log('Evaluating body data: <content omitted>');
     const requestBody = evaluateRoute(JSON.stringify(requestData.requestBody), context);
 
     if (['post', 'put'].includes(requestData.method)) {
@@ -90,12 +107,12 @@ const getResponsesInDependencyOrder = async (swaggerSpec,
         }
       });
 
-    process.log(`Successfully processed API call on node ${node}`);
-    process.log('-');
+    global.log(`Successfully processed API call on node ${node}`);
+    global.log('-');
   }
 
-  process.log('Swagger response generation completed');
-  return { swaggerSpec, bodyDefinitions };
+  global.log('Swagger response generation completed');
+  return { swaggerSpec, bodyDefinitions, dependencyGraph };
 };
 
 module.exports = { getResponsesInDependencyOrder };

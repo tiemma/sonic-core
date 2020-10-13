@@ -1,14 +1,21 @@
 const { createLogger, format, transports } = require('winston');
 const {
-  blue, white,
+  blue,
 } = require('chalk');
 
 const { printf, combine } = format;
 
-const logger = () => {
+const logLevels = {
+  ERROR: 'error',
+  WARN: 'warn',
+  INFO: 'info',
+  DEBUG: 'debug',
+};
+
+const logger = (logLevel) => {
   const plainFormat = printf(({
-    level, message, label, time, color,
-  }) => `${blue(time)} [${JSON.stringify(label)}] ${color(level)}: ${color(message)}`);
+    level, message, label, time,
+  }) => `${blue(time)} [${JSON.stringify(label)}] ${level}: ${message}`);
 
   const instance = createLogger({
     format: combine(
@@ -18,14 +25,13 @@ const logger = () => {
   });
 
   return (msg, label) => instance.log(
-    'info',
-    JSON.stringify(msg, null, 4),
+    logLevel,
+    msg,
     {
       label: label || {},
       time: new Date().toISOString(),
-      color: white,
     },
   );
 };
 
-module.exports = logger;
+module.exports = { logger, logLevels };

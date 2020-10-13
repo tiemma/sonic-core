@@ -3,7 +3,6 @@ const safeEval = require('safe-eval');
 const {
   routeParametersRegex, requestBodyDependencyRegex, getDependency, routeDependencyRegex,
 } = require('./regex-utils');
-const { satisfyDependencyConstraints, dependencyCycleDetection } = require('./graph-utils');
 
 const getType = (obj) => ({}.toString
   .call(obj)
@@ -99,7 +98,7 @@ const buildSwaggerJSON = (data) => {
           op.properties[key].type = DataTypes.OBJECT;
           break;
         default:
-          process.log(`skipping ${typeData}`);
+          global.log(`skipping ${typeData}`);
           break;
       }
     }
@@ -181,7 +180,7 @@ const addDefinitions = (bodyDefinitions, swaggerSpec = {}) => {
 };
 
 const parseSwaggerRouteData = (swaggerSpec, bodyDefinitions) => {
-  process.log('Generating JSON object representing decomposed swagger definitions');
+  global.log('Generating JSON object representing decomposed swagger definitions');
   const definitions = { ...getDefinitions(swaggerSpec), ...bodyDefinitions };
   const { paths } = swaggerSpec;
   const dependencyGraph = {};
@@ -190,7 +189,7 @@ const parseSwaggerRouteData = (swaggerSpec, bodyDefinitions) => {
     const routes = paths[path];
 
     for (const method of Object.keys(routes)) {
-      process.log(`Parsing documentation under ${method.toUpperCase()} ${path}`);
+      global.log(`Parsing documentation under ${method.toUpperCase()} ${path}`);
       const { name } = routes[method];
 
       if (!name) {
@@ -201,13 +200,13 @@ const parseSwaggerRouteData = (swaggerSpec, bodyDefinitions) => {
         throw Error(`Duplicate dependency name: ${name}`);
       }
 
-      process.log('Obtaining parameter dependencies');
+      global.log('Obtaining parameter dependencies');
       const {
         route,
         dependencies: parameterDependencies,
       } = getParameterDependencies(path, method, routes[method].parameters, name);
 
-      process.log('Obtaining request body dependencies');
+      global.log('Obtaining request body dependencies');
       const {
         body,
         definitionName,
@@ -234,13 +233,10 @@ const parseSwaggerRouteData = (swaggerSpec, bodyDefinitions) => {
         dependencyGraph[name].requestData = reqObj;
       }
 
-      process.log(`Successfully obtained dependencies for node ${name}`);
-      process.log('-');
+      global.log(`Successfully obtained dependencies for node ${name}`);
+      global.log('-');
     }
   }
-
-  satisfyDependencyConstraints(dependencyGraph);
-  dependencyCycleDetection(dependencyGraph);
 
   return { dependencyGraph };
 };
