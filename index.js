@@ -1,11 +1,11 @@
 const swaggerJSDoc = require('swagger-jsdoc');
 const { textSync } = require('figlet');
-const { yellow } = require('chalk');
+const { yellow, red } = require('chalk');
 const { program } = require('commander');
 const { writeFileSync } = require('fs');
 const { exec } = require('child_process');
 const ws = require('ws');
-const { dependencyCycleDetection, satisfyDependencyConstraints } = require('./src/graph-utils');
+const { dependencyCycleDetection, satisfyDependencyConstraints, topologicalDependencySort } = require('./src/graph-utils');
 
 const { version } = require('./package.json');
 const {
@@ -13,11 +13,13 @@ const {
 } = require('./src/cli-utils');
 const { addDefinitions, parseSwaggerRouteData } = require('./src/swagger-utils');
 const { getResponsesInDependencyOrder } = require('./src/api-utils');
-const { logger: loggerInstantiator, logLevels } = require('./src/logger');
+const { debugLogger } = require('./src/logger');
+
+const logger = debugLogger(__filename);
 
 const swaggerResponse = async (
+  swaggerDoc,
   requestOptions = {},
-  swaggerOptions = {},
   bodyDefinitions = {},
   dataPath = [],
 ) => {
@@ -26,7 +28,7 @@ const swaggerResponse = async (
     bodyDefinitions: definitions,
     dependencyGraph,
   } = await getResponsesInDependencyOrder(
-    swaggerJSDoc(swaggerOptions),
+    swaggerDoc,
     requestOptions,
     bodyDefinitions,
     dataPath,
@@ -45,69 +47,71 @@ const execCommand = (command) => {
 
   child.stdout.setEncoding('utf-8');
   child.stdout.on('data', (data) => {
-    global.log(data);
+    logger(data);
   });
 
   child.stderr.setEncoding('utf-8');
   child.stderr.on('data', (data) => {
-    global.log(data);
+    logger(data);
   });
 
   child.stdout.on('close', (code) => {
-    global.log(code);
+    logger(code);
 
-    global.log('Shutting down...');
+    logger('Shutting down...');
   });
 };
 
-const initWebSocketServer = (metrics) => {
+const initWebSocketServer = async (swaggerOptions, inputFile, bodyDefinitions) => {
   const server = new ws.Server(
     { port: 8080, path: '/metrics' },
     () => {
-      global.log('Websocket server is up and running');
+      logger('Websocket server is up and running');
     },
   );
 
-  server.on('connection', (socket) => {
-    socket.send(metrics);
+  server.on('connection', async (socket) => {
+    const swaggerDoc = await inputFile || swaggerJSDoc(await swaggerOptions);
+    const { dependencyGraph } = parseSwaggerRouteData(swaggerDoc, await bodyDefinitions);
+
+    const metrics = {
+      dependencyGraph,
+      cycleData: dependencyCycleDetection(dependencyGraph),
+      unsatisfiedDependencies: satisfyDependencyConstraints(dependencyGraph),
+      dependencyOrderQueue: topologicalDependencySort(dependencyGraph),
+    };
+
+    socket.send(JSON.stringify(metrics));
   });
 };
 
-const serveFrontend = (metrics) => {
-  initWebSocketServer(metrics);
+const serveFrontend = (swaggerOptions, inputFile, bodyDefinitions) => {
+  initWebSocketServer(swaggerOptions, inputFile, bodyDefinitions);
   execCommand('npm start');
 };
 
 const init = async (options) => {
   const {
-    requestOptions, swaggerOptions, bodyDefinitions, dataPath, outputFile, verbose,
+    requestOptions, swaggerOptions, bodyDefinitions, dataPath, outputFile, inputFile, strict,
   } = options;
 
-  if (verbose) {
-    global.log = loggerInstantiator(logLevels.INFO);
+  const swaggerDoc = await inputFile || swaggerJSDoc(await swaggerOptions);
+  let swaggerSpec = '';
+  try {
+    swaggerSpec = (await swaggerResponse(
+      swaggerDoc,
+      await requestOptions,
+      await bodyDefinitions,
+      dataPath,
+    )).swaggerSpec;
+  } catch (e) {
+    logger(red('Error whilst obtaining swagger response, defaulting to writing swagger spec without response'));
   }
 
-  // const { swaggerSpec, dependencyGraph } = await swaggerResponse(
-  //   await requestOptions,
-  //   await swaggerOptions,
-  //   await bodyDefinitions,
-  //   dataPath,
-  // );
-
-  const { dependencyGraph } = parseSwaggerRouteData(
-    swaggerJSDoc(await swaggerOptions),
-    await bodyDefinitions,
-  );
-
-  const metrics = {
-    dependencyGraph,
-    cycleData: dependencyCycleDetection(dependencyGraph),
-    unsatisfiedDependencies: satisfyDependencyConstraints(dependencyGraph),
-  };
-  serveFrontend(JSON.stringify(metrics));
+  serveFrontend(swaggerOptions, inputFile, bodyDefinitions);
 
   if (!outputFile) {
-    global.log(swaggerSpec);
+    logger(swaggerSpec);
   } else {
     const data = JSON.stringify(swaggerSpec, null, 4);
     writeFileSync(outputFile, data);
@@ -125,8 +129,9 @@ const init = async (options) => {
     .option('-s, --swagger-options <file>', 'Path to the file exporting additional SwaggerJSDoc configuration in JSON', verifyFileIsRequirable)
     .option('-p, --data-path <items>', 'Comma separated path to the actual response data to use in evaluating responses', commaSeparatedList, [])
     .option('-e, --entry-script <items>', 'Package.json script to run the server')
+    .option('-i, --input-file <file>', 'Path to an input swagger file to process, defaults to swaggerJSDoc parse', verifyFileIsRequirable)
     .option('-o, --output-file <type>', 'Output file for the generated swagger spec.\nIf not provided, output is sent to the consoles standard output', createFileIfNotExists)
-    .option('-v, --verbose', 'Outputs task logs to console');
+    .option('--strict', 'Enable strict mode on swagger data  validation');
 
   program.command('serve')
     .option('-p, --port <port>', 'Port to host the websocket server on', '8080');

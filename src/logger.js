@@ -1,7 +1,10 @@
 const { createLogger, format, transports } = require('winston');
+const debug = require('debug');
+const { dirname, relative } = require('path');
 const {
   blue,
 } = require('chalk');
+const { name } = require('../package.json');
 
 const { printf, combine } = format;
 
@@ -11,6 +14,8 @@ const logLevels = {
   INFO: 'info',
   DEBUG: 'debug',
 };
+
+const debugLogger = (namespace) => debug(`${name}: ${relative(dirname(require.main.filename.replace('bin', '')), namespace)}`);
 
 const logger = (logLevel) => {
   const plainFormat = printf(({
@@ -34,4 +39,4 @@ const logger = (logLevel) => {
   );
 };
 
-module.exports = { logger, logLevels };
+module.exports = { logger, logLevels, debugLogger };

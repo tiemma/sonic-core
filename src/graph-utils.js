@@ -1,10 +1,21 @@
 const Queue = require('./structures');
+const { debugLogger } = require('./logger');
+
+const logger = debugLogger(__filename);
+
+const resolveDependencyIfUnknown = (node) => {
+  if (node && node.dependencies) {
+    return node.dependencies;
+  }
+
+  return [];
+};
 
 const isCyclicUtil = (graph, node, visited, stack, history = []) => {
   visited[node] = true;
   stack[node] = true;
 
-  for (const neighbour of graph[node].dependencies) {
+  for (const neighbour of resolveDependencyIfUnknown(graph[node])) {
     const stackHistory = [...history, neighbour];
     if (!visited[neighbour]) {
       const data = isCyclicUtil(graph, neighbour, visited, stack, stackHistory);
@@ -40,7 +51,7 @@ const dependencyCycleDetection = (dependencyGraph) => {
 const satisfyDependencyConstraints = (dependencyGraph) => {
   const unsatisfiedDependencies = new Set();
   for (const dependency of Object.keys(dependencyGraph)) {
-    for (const key of dependencyGraph[dependency].dependencies) {
+    for (const key of resolveDependencyIfUnknown(dependencyGraph[dependency])) {
       if (!dependencyGraph[key]) {
         unsatisfiedDependencies.add(key);
       }
@@ -50,7 +61,7 @@ const satisfyDependencyConstraints = (dependencyGraph) => {
 };
 
 const getIndegreeAndAdjacencyList = (dependencyGraph) => {
-  global.log('Generating in-degree map and adjacency list off dependency graph');
+  logger('Generating in-degree map and adjacency list off dependency graph');
   const inDegreeMap = {};
   const adjList = {};
 
@@ -60,19 +71,28 @@ const getIndegreeAndAdjacencyList = (dependencyGraph) => {
   }
 
   for (const node of Object.keys(dependencyGraph)) {
-    for (const neighbour of dependencyGraph[node].dependencies) {
+    for (const neighbour of resolveDependencyIfUnknown(dependencyGraph[node])) {
+      if (!adjList[neighbour]) {
+        adjList[neighbour] = [];
+      }
       adjList[neighbour].push(node);
     }
   }
 
-  global.log('Completed generation of in-degree map and adjacency list');
-  global.log('-');
+  for (const node of Object.keys(adjList)) {
+    if (!inDegreeMap[node]) {
+      inDegreeMap[node] = 0;
+    }
+  }
+
+  logger('Completed generation of in-degree map and adjacency list');
+  logger('-');
   return { inDegreeMap, adjList };
 };
 
 const topologicalDependencySort = (dependencyGraph) => {
   // Kahn's algorithm
-  global.log('Starting sorting process for correct dependency API call order');
+  logger('Starting sorting process for correct dependency API call order');
   const { inDegreeMap, adjList } = getIndegreeAndAdjacencyList(dependencyGraph);
   const dependencyQueue = new Queue();
 
@@ -84,13 +104,17 @@ const topologicalDependencySort = (dependencyGraph) => {
 
     let node; // Last node with no dependency
     for (node of Object.keys(dependencyGraph)) {
+      // In the event of an unresolved dependency
+      // The count of in-degrees is negative to the number of its
+      // dependencies hence why it can fall below 0
+      // since it has zero dependencies at the start
       if (inDegreeMap[node] === 0) {
         cyclic = false;
         break;
       }
     }
     if (cyclic) {
-      throw Error('Dependencies cannot be sorted, cyclic loop detected}');
+      throw Error('Dependencies cannot be sorted, missing dependency causing cyclic loop detected}');
     }
 
     inDegreeMap[node] -= 1;
@@ -100,8 +124,8 @@ const topologicalDependencySort = (dependencyGraph) => {
     }
   });
 
-  global.log('Completed sorting of dependencies, proceeding to API call process...');
-  global.log('-');
+  logger('Completed sorting of dependencies, proceeding to API call process...');
+  logger('-');
   return dependencyQueue;
 };
 

@@ -157,14 +157,6 @@ router.post(
  *         description: Token not provided
  *       403:
  *         description: Super Admin privileges required
- *     parameters:
- *     - name: budgetID
- *       in: path
- *       description: Budget ID
- *       defaultTemplate: $Organization.id
- *       required: true
- *       schema:
- *         $ref: "#/definitions/pathID"
  */
 router.get("/organizations", (req: Request, res: Response) => {
     console.log(req.params)
@@ -175,7 +167,7 @@ router.get("/organizations", (req: Request, res: Response) => {
  * @swagger
  * /clusters:
  *   get:
- *     name: Clusters
+ *     name: Cluster
  *     summary: Get clusters
  *     description: Gets all clusters for the user's organization
  *     tags:

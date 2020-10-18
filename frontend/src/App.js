@@ -17,13 +17,15 @@ class App extends Component {
         this.ws = new WebSocket("ws://localhost:8080/metrics");
     }
 
+    resolveDependencyIfUnknown = (dependencies) => dependencies || [];
+
     generateNodesList = (dependencyGraph) => Object.keys(dependencyGraph).map((node, index) => {
         return {
             id: node,
             label: node,
             title: node,
             color: Colors[Math.floor(Math.random() * Colors.length)],
-            shape: "dot"
+            shape: "dot",
         }
     });
 
@@ -45,7 +47,7 @@ class App extends Component {
     generateEdgesListFromDependencyGraph = (dependencyGraph) => {
         const edges = [];
         for(const node of Object.keys(dependencyGraph)) {
-            for (const neighbour of dependencyGraph[node].dependencies) {
+            for (const neighbour of this.resolveDependencyIfUnknown(dependencyGraph[node].dependencies)) {
                 const state = {to: node, from: neighbour}
                 if(!dependencyGraph[neighbour]) {
                     state.dashes = true
@@ -87,16 +89,19 @@ class App extends Component {
 
     render() {
         const options = {
-            layout: {
-                hierarchical: true
-            },
             edges: {
                 color: "#000000",
                 smooth: {
                     type: "dynamic",
                 }
             },
-            height: "500px"
+            nodes: {
+                mass: 1.5,
+            },
+            height: "800px",
+            layout: {
+                // randomSeed: Math.random(),
+            },
         };
         const legendImageSize = "40rem";
         return (

@@ -1,8 +1,11 @@
 const matchAll = require('match-all');
 const safeEval = require('safe-eval');
+const { debugLogger } = require('./logger');
 const {
   routeParametersRegex, requestBodyDependencyRegex, getDependency, routeDependencyRegex,
 } = require('./regex-utils');
+
+const logger = debugLogger(__filename);
 
 const getType = (obj) => ({}.toString
   .call(obj)
@@ -98,7 +101,7 @@ const buildSwaggerJSON = (data) => {
           op.properties[key].type = DataTypes.OBJECT;
           break;
         default:
-          global.log(`skipping ${typeData}`);
+          logger(`skipping ${typeData}`);
           break;
       }
     }
@@ -179,8 +182,8 @@ const addDefinitions = (bodyDefinitions, swaggerSpec = {}) => {
   return swaggerSpec;
 };
 
-const parseSwaggerRouteData = (swaggerSpec, bodyDefinitions) => {
-  global.log('Generating JSON object representing decomposed swagger definitions');
+const parseSwaggerRouteData = (swaggerSpec, bodyDefinitions, strictMode = false) => {
+  logger('Generating JSON object representing decomposed swagger definitions');
   const definitions = { ...getDefinitions(swaggerSpec), ...bodyDefinitions };
   const { paths } = swaggerSpec;
   const dependencyGraph = {};
@@ -189,10 +192,14 @@ const parseSwaggerRouteData = (swaggerSpec, bodyDefinitions) => {
     const routes = paths[path];
 
     for (const method of Object.keys(routes)) {
-      global.log(`Parsing documentation under ${method.toUpperCase()} ${path}`);
+      logger(`Parsing documentation under ${method.toUpperCase()} ${path}`);
       const { name } = routes[method];
 
       if (!name) {
+        if (!strictMode) {
+          // eslint-disable-next-line no-continue
+          continue;
+        }
         throw Error(`Define name for route: ${method.toUpperCase()} ${path}`);
       }
 
@@ -200,13 +207,13 @@ const parseSwaggerRouteData = (swaggerSpec, bodyDefinitions) => {
         throw Error(`Duplicate dependency name: ${name}`);
       }
 
-      global.log('Obtaining parameter dependencies');
+      logger('Obtaining parameter dependencies');
       const {
         route,
         dependencies: parameterDependencies,
       } = getParameterDependencies(path, method, routes[method].parameters, name);
 
-      global.log('Obtaining request body dependencies');
+      logger('Obtaining request body dependencies');
       const {
         body,
         definitionName,
@@ -233,8 +240,8 @@ const parseSwaggerRouteData = (swaggerSpec, bodyDefinitions) => {
         dependencyGraph[name].requestData = reqObj;
       }
 
-      global.log(`Successfully obtained dependencies for node ${name}`);
-      global.log('-');
+      logger(`Successfully obtained dependencies for node ${name}`);
+      logger('-');
     }
   }
 

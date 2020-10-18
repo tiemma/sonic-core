@@ -1,7 +1,9 @@
 const { ensureFileSync } = require('fs-extra');
 const { resolve } = require('path');
+const { debugLogger } = require('./logger');
 
 const commaSeparatedList = (value) => value.split(',');
+const logger = debugLogger(__filename);
 
 // async by default since certain configs would
 // require promise related calls
@@ -12,7 +14,7 @@ const verifyFileIsRequirable = async (path) => {
   try {
     const resolvedPath = resolve(path);
     // eslint-disable-next-line no-console
-    console.log(`Attempting to require file at path ${resolvedPath}`);
+    logger(`Attempting to require file at path ${resolvedPath}`);
     // eslint-disable-next-line global-require,import/no-dynamic-require
     return require(resolvedPath);
   } catch (e) {
@@ -23,7 +25,7 @@ const verifyFileIsRequirable = async (path) => {
 const createFileIfNotExists = (path) => {
   if (!path) {
     // eslint-disable-next-line no-console
-    console.log('Swagger response would be written to consoles standard output');
+    logger('Swagger response would be written to consoles standard output');
     return '';
   }
   ensureFileSync(path);
