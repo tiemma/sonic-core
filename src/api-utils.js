@@ -1,4 +1,5 @@
 const { create } = require('axios');
+const { StatusCodes } = require('http-status-codes');
 const { dependencyCycleDetection, satisfyDependencyConstraints } = require('./graph-utils');
 
 const { parseSwaggerRouteData, evaluateRoute, buildSwaggerJSON } = require('./swagger-utils');
@@ -18,7 +19,7 @@ const swaggerRef = (contentType, responseRef) => ({
   },
 });
 
-const setResponse = (swaggerSpec, node, requestData, response, dataPath) => {
+const setResponse = (swaggerSpec, node, requestData, response, dataPath, strict) => {
   // eslint-disable-next-line max-len
   const responseTypes = swaggerSpec.paths[requestData.originalRoute][requestData.method].responses[response.status];
   const contentType = response.headers['content-type'].split(';')[0];
@@ -27,6 +28,9 @@ const setResponse = (swaggerSpec, node, requestData, response, dataPath) => {
 
   if (!responseTypes) {
     logger(`Response code <${response.status}> not documented in swagger, adding under definition ${responseRef}`);
+    if (strict) {
+      throw Error(`Response code <${response.status}> not documented in swagger`);
+    }
 
     // eslint-disable-next-line max-len
     swaggerSpec.paths[requestData.originalRoute][requestData.method].responses[response.status] = swaggerRef(contentType, responseRef);
@@ -38,7 +42,6 @@ const setResponse = (swaggerSpec, node, requestData, response, dataPath) => {
   for (const path of dataPath) {
     data = data[path];
   }
-
   cache[node] = data;
   swaggerSpec.definitions[responseRef] = buildSwaggerJSON(data);
 };
@@ -46,8 +49,9 @@ const setResponse = (swaggerSpec, node, requestData, response, dataPath) => {
 const getResponsesInDependencyOrder = async (swaggerSpec,
   requestOptions = {},
   bodyDefinitions = {},
-  dataPath = []) => {
-  const { dependencyGraph } = parseSwaggerRouteData(swaggerSpec, bodyDefinitions);
+  dataPath = [],
+  strict = false) => {
+  const { dependencyGraph } = parseSwaggerRouteData(swaggerSpec, bodyDefinitions, strict);
 
   logger('Verifying all dependencies are satisfied in the dependency graph');
   const unsatisfiedDependencies = satisfyDependencyConstraints(dependencyGraph);
@@ -66,6 +70,7 @@ const getResponsesInDependencyOrder = async (swaggerSpec,
   logger('-');
 
   const dependencyOrderQueue = topologicalDependencySort(dependencyGraph);
+  logger('Completed sorting of dependencies, proceeding to API call process...');
 
   const axios = create(requestOptions);
 
@@ -73,6 +78,11 @@ const getResponsesInDependencyOrder = async (swaggerSpec,
   while (!dependencyOrderQueue.isEmpty()) {
     const node = dependencyOrderQueue.dequeue();
     const { requestData } = dependencyGraph[node];
+    if (!node) {
+      // Event node is undefined
+      // eslint-disable-next-line no-continue
+      continue;
+    }
     logger(`Processing node ${node} with details: ${requestData.method.toUpperCase()} ${requestData.originalRoute}`);
 
     const context = {
@@ -89,6 +99,7 @@ const getResponsesInDependencyOrder = async (swaggerSpec,
       bodyDefinitions[requestData.definitionName] = JSON.parse(requestBody);
     }
 
+    const ignoreResponseCodes = [StatusCodes.NO_CONTENT];
     // eslint-disable-next-line no-await-in-loop
     await axios.request({
       method: requestData.method,
@@ -96,15 +107,16 @@ const getResponsesInDependencyOrder = async (swaggerSpec,
       url: apiRoute,
     })
       .then((response) => {
-        setResponse(swaggerSpec, node, requestData, response, dataPath);
+        if (!ignoreResponseCodes.includes(response.status)) {
+          setResponse(swaggerSpec, node, requestData, response, dataPath, strict);
+        }
       })
       .catch((response) => {
         if (response.response) {
-          setResponse(swaggerSpec, node, requestData, response.response, dataPath);
+          setResponse(swaggerSpec, node, requestData, response.response, dataPath, strict);
         } else {
           throw Error(
-            `Error occurred querying route for dependency ${node}
-               on ${requestData.method.toUpperCase()} ${apiRoute}`,
+            `Error occurred querying route for dependency ${node} on ${requestData.method.toUpperCase()} ${apiRoute}: ${response.message}`,
           );
         }
       });

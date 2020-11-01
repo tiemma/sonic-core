@@ -14,7 +14,8 @@ class App extends Component {
                 nodes: [],
                 edges: []
         }
-        this.ws = new WebSocket("ws://localhost:8080/metrics");
+        const PORT  = process.env.WEBSOCKET_PORT || 6060;
+        this.ws = new WebSocket(`ws://localhost:${PORT}/metrics`);
     }
 
     resolveDependencyIfUnknown = (dependencies) => dependencies || [];
@@ -96,11 +97,11 @@ class App extends Component {
                 }
             },
             nodes: {
-                mass: 1.5,
+                mass: 1,
             },
             height: "800px",
             layout: {
-                // randomSeed: Math.random(),
+                randomSeed: Math.random(),
             },
         };
         const legendImageSize = "40rem";

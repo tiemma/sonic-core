@@ -124,7 +124,6 @@ const topologicalDependencySort = (dependencyGraph) => {
     }
   });
 
-  logger('Completed sorting of dependencies, proceeding to API call process...');
   logger('-');
   return dependencyQueue;
 };

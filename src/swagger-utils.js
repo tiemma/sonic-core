@@ -40,7 +40,7 @@ const generateResponse = (op, obj) => {
 };
 
 const buildSwaggerJSON = (data) => {
-  const keys = Object.keys(data);
+  const keys = Object.keys(data || {});
   const op = {
     required: keys,
     properties: {},
@@ -111,13 +111,14 @@ const buildSwaggerJSON = (data) => {
 
 const getBodyDependencies = (routes, method, definitions) => {
   const allowedBodyRoutes = ['post', 'put'];
+  let definitionName;
 
   if (allowedBodyRoutes.includes(method) && routes[method].requestBody) {
     const contentTypes = routes[method].requestBody.content;
 
     for (const type of Object.keys(contentTypes)) {
       const definitionRef = contentTypes[type].schema.$ref;
-      const definitionName = definitionRef.split('/').slice(-1)[0];
+      [definitionName] = definitionRef.split('/').slice(-1);
       const body = definitions[definitionName];
 
       if (body) {
@@ -127,10 +128,10 @@ const getBodyDependencies = (routes, method, definitions) => {
     }
   }
 
-  return { dependencies: [], body: {} };
+  return { dependencies: [], body: {}, definitionName };
 };
 
-const getParameterDependencies = (route, method, parameters, name) => {
+const getParameterDependencies = (route, method, parameters, name, strictMode = false) => {
   let dependencies = [];
   const templateKey = 'defaultTemplate';
 
@@ -151,7 +152,7 @@ const getParameterDependencies = (route, method, parameters, name) => {
         dependencies = [...dependencies, getDependency(template)];
       }
     });
-    if (!name && dependencies) {
+    if (!name && dependencies && strictMode) {
       throw Error(`All routes with dependencies must have a name: ${method} ${route}`);
     }
   } else {
@@ -187,6 +188,7 @@ const parseSwaggerRouteData = (swaggerSpec, bodyDefinitions, strictMode = false)
   const definitions = { ...getDefinitions(swaggerSpec), ...bodyDefinitions };
   const { paths } = swaggerSpec;
   const dependencyGraph = {};
+  const definitionMap = {};
 
   for (const path of Object.keys(paths)) {
     const routes = paths[path];
@@ -198,12 +200,13 @@ const parseSwaggerRouteData = (swaggerSpec, bodyDefinitions, strictMode = false)
       if (!name) {
         if (!strictMode) {
           // eslint-disable-next-line no-continue
-          continue;
+          // continue;
+        } else {
+          throw Error(`Define name for route: ${method.toUpperCase()} ${path}`);
         }
-        throw Error(`Define name for route: ${method.toUpperCase()} ${path}`);
       }
 
-      if (dependencyGraph[name]) {
+      if (dependencyGraph[name] && strictMode) {
         throw Error(`Duplicate dependency name: ${name}`);
       }
 
@@ -219,6 +222,9 @@ const parseSwaggerRouteData = (swaggerSpec, bodyDefinitions, strictMode = false)
         definitionName,
         dependencies: bodyDependencies,
       } = getBodyDependencies(routes, method, definitions);
+      if (definitionName) {
+        definitionMap[route] = { [method.toUpperCase()]: definitionName };
+      }
 
       const dependencies = Array.from(
         new Set([...parameterDependencies, ...bodyDependencies]).values(),
@@ -245,7 +251,7 @@ const parseSwaggerRouteData = (swaggerSpec, bodyDefinitions, strictMode = false)
     }
   }
 
-  return { dependencyGraph };
+  return { dependencyGraph, definitionMap };
 };
 
 module.exports = {

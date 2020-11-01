@@ -5,8 +5,8 @@ const { program } = require('commander');
 const { writeFileSync } = require('fs');
 const { exec } = require('child_process');
 const ws = require('ws');
-const { dependencyCycleDetection, satisfyDependencyConstraints, topologicalDependencySort } = require('./src/graph-utils');
 
+const { dependencyCycleDetection, satisfyDependencyConstraints, topologicalDependencySort } = require('./src/graph-utils');
 const { version } = require('./package.json');
 const {
   commaSeparatedList, verifyFileIsRequirable, createFileIfNotExists,
@@ -22,6 +22,7 @@ const swaggerResponse = async (
   requestOptions = {},
   bodyDefinitions = {},
   dataPath = [],
+  strict = false,
 ) => {
   const {
     swaggerSpec,
@@ -32,6 +33,7 @@ const swaggerResponse = async (
     requestOptions,
     bodyDefinitions,
     dataPath,
+    strict,
   );
 
   return { swaggerSpec: addDefinitions(definitions, swaggerSpec), dependencyGraph };
@@ -62,11 +64,12 @@ const execCommand = (command) => {
   });
 };
 
-const initWebSocketServer = async (swaggerOptions, inputFile, bodyDefinitions) => {
+const initWebSocketServer = async (swaggerOptions, inputFile, bodyDefinitions, port) => {
+  const PORT = port || 6060;
   const server = new ws.Server(
-    { port: 8080, path: '/metrics' },
+    { port: PORT, path: '/metrics' },
     () => {
-      logger('Websocket server is up and running');
+      logger(`Websocket server is up and running on port: ${PORT}`);
     },
   );
 
@@ -85,14 +88,14 @@ const initWebSocketServer = async (swaggerOptions, inputFile, bodyDefinitions) =
   });
 };
 
-const serveFrontend = (swaggerOptions, inputFile, bodyDefinitions) => {
-  initWebSocketServer(swaggerOptions, inputFile, bodyDefinitions);
+const serveFrontend = (swaggerOptions, inputFile, bodyDefinitions, port) => {
+  initWebSocketServer(swaggerOptions, inputFile, bodyDefinitions, port);
   execCommand('npm start');
 };
 
 const init = async (options) => {
   const {
-    requestOptions, swaggerOptions, bodyDefinitions, dataPath, outputFile, inputFile, strict,
+    requestOptions, swaggerOptions, bodyDefinitions, dataPath, outputFile, inputFile, strict, port,
   } = options;
 
   const swaggerDoc = await inputFile || swaggerJSDoc(await swaggerOptions);
@@ -103,12 +106,15 @@ const init = async (options) => {
       await requestOptions,
       await bodyDefinitions,
       dataPath,
+      strict,
     )).swaggerSpec;
   } catch (e) {
+    logger(yellow(e));
     logger(red('Error whilst obtaining swagger response, defaulting to writing swagger spec without response'));
+    throw e;
   }
 
-  serveFrontend(swaggerOptions, inputFile, bodyDefinitions);
+  serveFrontend(swaggerOptions, inputFile, bodyDefinitions, port);
 
   if (!outputFile) {
     logger(swaggerSpec);
@@ -131,10 +137,10 @@ const init = async (options) => {
     .option('-e, --entry-script <items>', 'Package.json script to run the server')
     .option('-i, --input-file <file>', 'Path to an input swagger file to process, defaults to swaggerJSDoc parse', verifyFileIsRequirable)
     .option('-o, --output-file <type>', 'Output file for the generated swagger spec.\nIf not provided, output is sent to the consoles standard output', createFileIfNotExists)
-    .option('--strict', 'Enable strict mode on swagger data  validation');
+    .option('--strict', 'Enable strict mode on swagger data  validation', false);
 
-  program.command('serve')
-    .option('-p, --port <port>', 'Port to host the websocket server on', '8080');
+  // program.command('serve')
+  //   .option('-p, --port <port>', 'Port to host the websocket server on', process.env.WEBSOCKET_PORT || '8080');
 
   program.parse(process.argv);
 

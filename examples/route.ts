@@ -1,4 +1,4 @@
-import express, { Router, Request, Response } from "express";
+import express, {Router, Request, Response } from "express";
 
 const router = Router();
 const app = express();
@@ -6,12 +6,17 @@ const app = express();
 import swaggerUI from "swagger-ui-express";
 import * as fs from "fs";
 
+import {getResponse} from "../src/middleware";
+
 const customCss = ".topbar { display: none !important;}";
 
+const swaggerOptions = require("./swagger-config");
 const swaggerSpec = JSON.parse(fs.readFileSync("./dist/swagger.json", { encoding: "utf8" }))
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.use(getResponse(swaggerOptions));
 
 /**
  * @swagger
@@ -189,14 +194,21 @@ router.get("/clusters", (req: Request, res: Response) => {
     console.log(req.params)
     return res.json([{"id": "bbe550ea-d564-4099-a0a5-bb60940529d1"}])
 });
-app.use("/api/v1", router);
 
+router.post("/clusters", (req: Request, res: Response) => {
+    console.log(req.params)
+    return res.json([{"id": "bbe550ea-d564-4099-a0a5-bb60940529d1"}])
+});
+
+
+app.use("/api/v1", router);
 
 app.use(
     "/api/docs",
     swaggerUI.serve,
     swaggerUI.setup(swaggerSpec, {}, {}, customCss)
 );
+
 
 app.listen(3100, () => {
     console.info("Express server started on port");

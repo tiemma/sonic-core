@@ -15,7 +15,7 @@ const logLevels = {
   DEBUG: 'debug',
 };
 
-const debugLogger = (namespace) => debug(`${name}: ${relative(dirname(require.main.filename.replace('bin', '')), namespace)}`);
+const debugLogger = (namespace) => debug(`${name}: ${new Date().toISOString()} ${relative(dirname(require.main.filename.replace('bin', '')), namespace)}`);
 
 const logger = (logLevel) => {
   const plainFormat = printf(({
