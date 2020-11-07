@@ -98,6 +98,17 @@ class App extends Component {
             },
             nodes: {
                 mass: 1,
+                scaling: {
+                    min: 10,
+                    max: 30,
+                    label: {
+                        enabled: false,
+                        min: 14,
+                        max: 30,
+                        maxVisible: 30,
+                        drawThreshold: 5
+                    },
+                },
             },
             height: "800px",
             layout: {

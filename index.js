@@ -139,8 +139,8 @@ const init = async (options) => {
     .option('-o, --output-file <type>', 'Output file for the generated swagger spec.\nIf not provided, output is sent to the consoles standard output', createFileIfNotExists)
     .option('--strict', 'Enable strict mode on swagger data  validation', false);
 
-  // program.command('serve')
-  //   .option('-p, --port <port>', 'Port to host the websocket server on', process.env.WEBSOCKET_PORT || '8080');
+  program.command('serve')
+    .option('-p, --port <port>', 'Port to host the websocket server on', process.env.WEBSOCKET_PORT || '8080');
 
   program.parse(process.argv);
 

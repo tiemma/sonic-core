@@ -42,6 +42,7 @@ const setResponse = (swaggerSpec, node, requestData, response, dataPath, strict)
   for (const path of dataPath) {
     data = data[path];
   }
+  logger(`Writing data to cache: ${JSON.stringify(data, null, 4)}`);
   cache[node] = data;
   swaggerSpec.definitions[responseRef] = buildSwaggerJSON(data);
 };
@@ -105,6 +106,7 @@ const getResponsesInDependencyOrder = async (swaggerSpec,
       method: requestData.method,
       data: JSON.parse(requestBody),
       url: apiRoute,
+      timeout: 20000,
     })
       .then((response) => {
         if (!ignoreResponseCodes.includes(response.status)) {
@@ -120,7 +122,6 @@ const getResponsesInDependencyOrder = async (swaggerSpec,
           );
         }
       });
-
     logger(`Successfully processed API call on node ${node}`);
     logger('-');
   }

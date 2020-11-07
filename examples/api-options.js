@@ -2,7 +2,7 @@ const token = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcmdhbml6YXRpb25JRCI6ImJi
 const requestOptions = {
   headers: { Authorization: `Bearer ${token}` },
   timeout: 10000,
-  baseURL: 'http://localhost:3100' + '/api/v1',
+  baseURL: 'http://localhost:3200/api/v1',
 };
 
 module.exports = requestOptions;

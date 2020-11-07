@@ -200,7 +200,7 @@ const parseSwaggerRouteData = (swaggerSpec, bodyDefinitions, strictMode = false)
       if (!name) {
         if (!strictMode) {
           // eslint-disable-next-line no-continue
-          // continue;
+          continue;
         } else {
           throw Error(`Define name for route: ${method.toUpperCase()} ${path}`);
         }
@@ -223,7 +223,7 @@ const parseSwaggerRouteData = (swaggerSpec, bodyDefinitions, strictMode = false)
         dependencies: bodyDependencies,
       } = getBodyDependencies(routes, method, definitions);
       if (definitionName) {
-        definitionMap[route] = { [method.toUpperCase()]: definitionName };
+        definitionMap[path] = { [method.toUpperCase()]: definitionName };
       }
 
       const dependencies = Array.from(

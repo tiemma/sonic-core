@@ -46,7 +46,7 @@ const options = {
   // import swaggerDefinitions
   swaggerDefinition,
   // path to the API docs
-  // apis: ['/home/bakman/WebstormProjects/server/**/*.ts'],
+  // apis: ['/home/bakman/WebstormProjects/server-swagger/**/*.ts'],
   apis: ['/home/bakman/WebstormProjects/swaggerResponse/examples/route.ts'],
 };
 

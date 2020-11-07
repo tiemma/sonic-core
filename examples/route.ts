@@ -16,7 +16,7 @@ const swaggerSpec = JSON.parse(fs.readFileSync("./dist/swagger.json", { encoding
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(getResponse(swaggerOptions));
+app.use(getResponse(app, swaggerOptions));
 
 /**
  * @swagger
@@ -135,7 +135,6 @@ router.get(
 router.post(
     "/organizations/:id/budgets",
     (req: Request, res: Response) => {
-        console.log(1, req.body)
         return res.json({"id": req.params.id})
     }
 );
@@ -163,8 +162,7 @@ router.post(
  *       403:
  *         description: Super Admin privileges required
  */
-router.get("/organizations", (req: Request, res: Response) => {
-    console.log(req.params)
+router.get("/organizations", (_req: Request, res: Response) => {
     return res.json([{"id": "bbe550ea-d564-4099-a0a5-bb60940529d1"}])
 });
 
@@ -190,13 +188,11 @@ router.get("/organizations", (req: Request, res: Response) => {
  *       401:
  *         description: Token not provided
  */
-router.get("/clusters", (req: Request, res: Response) => {
-    console.log(req.params)
+router.get("/clusters", (_req: Request, res: Response) => {
     return res.json([{"id": "bbe550ea-d564-4099-a0a5-bb60940529d1"}])
 });
 
-router.post("/clusters", (req: Request, res: Response) => {
-    console.log(req.params)
+router.post("/clusters", (_req: Request, res: Response) => {
     return res.json([{"id": "bbe550ea-d564-4099-a0a5-bb60940529d1"}])
 });
 
@@ -210,6 +206,6 @@ app.use(
 );
 
 
-app.listen(3100, () => {
-    console.info("Express server started on port");
+app.listen(3200, () => {
+    console.info("Express server started on port: " + 3200);
 });
