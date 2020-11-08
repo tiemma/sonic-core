@@ -18,6 +18,18 @@ const DataTypes = {
   NULL: 'null',
 };
 
+const swaggerRef = (contentType, responseRef, prefix = '#/definitions') => ({
+  content: {
+    [contentType]: {
+      schema: {
+        $ref: `${prefix}/${responseRef}`,
+      },
+    },
+  },
+});
+
+const generateResponseRef = () => Math.random().toString(36).substring(7);
+
 const generateResponse = (op, obj) => {
   if (!obj) {
     return op;
@@ -109,7 +121,7 @@ const buildSwaggerJSON = (data) => {
   return op;
 };
 
-const getBodyDependencies = (routes, method, definitions) => {
+const getBodyDependencies = (routes, method, swaggerSpec) => {
   const allowedBodyRoutes = ['post', 'put'];
   let definitionName;
 
@@ -118,8 +130,15 @@ const getBodyDependencies = (routes, method, definitions) => {
 
     for (const type of Object.keys(contentTypes)) {
       const definitionRef = contentTypes[type].schema.$ref;
-      [definitionName] = definitionRef.split('/').slice(-1);
-      const body = definitions[definitionName];
+      const definitionPaths = definitionRef.split('/').slice(1);
+      [definitionName] = definitionPaths.slice(-1);
+      let body = '';
+      if (definitionName) {
+        body = swaggerSpec;
+        for (const path of definitionPaths) {
+          body = body[path];
+        }
+      }
 
       if (body) {
         const rawDeps = matchAll(JSON.stringify(body), requestBodyDependencyRegex).toArray();
@@ -185,7 +204,7 @@ const addDefinitions = (bodyDefinitions, swaggerSpec = {}) => {
 
 const parseSwaggerRouteData = (swaggerSpec, bodyDefinitions, strictMode = false) => {
   logger('Generating JSON object representing decomposed swagger definitions');
-  const definitions = { ...getDefinitions(swaggerSpec), ...bodyDefinitions };
+  swaggerSpec.definitions = { ...getDefinitions(swaggerSpec), ...bodyDefinitions };
   const { paths } = swaggerSpec;
   const dependencyGraph = {};
   const definitionMap = {};
@@ -221,7 +240,7 @@ const parseSwaggerRouteData = (swaggerSpec, bodyDefinitions, strictMode = false)
         body,
         definitionName,
         dependencies: bodyDependencies,
-      } = getBodyDependencies(routes, method, definitions);
+      } = getBodyDependencies(routes, method, swaggerSpec);
       if (definitionName) {
         definitionMap[path] = { [method.toUpperCase()]: definitionName };
       }
@@ -255,5 +274,11 @@ const parseSwaggerRouteData = (swaggerSpec, bodyDefinitions, strictMode = false)
 };
 
 module.exports = {
-  parseSwaggerRouteData, evaluateRoute, buildSwaggerJSON, addDefinitions,
+  parseSwaggerRouteData,
+  evaluateRoute,
+  buildSwaggerJSON,
+  addDefinitions,
+  swaggerRef,
+  generateResponseRef,
+  getType,
 };

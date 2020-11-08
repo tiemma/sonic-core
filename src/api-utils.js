@@ -2,28 +2,24 @@ const { create } = require('axios');
 const { StatusCodes } = require('http-status-codes');
 const { dependencyCycleDetection, satisfyDependencyConstraints } = require('./graph-utils');
 
-const { parseSwaggerRouteData, evaluateRoute, buildSwaggerJSON } = require('./swagger-utils');
+const {
+  parseSwaggerRouteData, evaluateRoute, buildSwaggerJSON, swaggerRef,
+  generateResponseRef,
+} = require('./swagger-utils');
 const { topologicalDependencySort } = require('./graph-utils');
 const { debugLogger } = require('./logger');
 
 const cache = {};
 const logger = debugLogger(__filename);
 
-const swaggerRef = (contentType, responseRef) => ({
-  content: {
-    [contentType]: {
-      schema: {
-        $ref: responseRef,
-      },
-    },
-  },
-});
-
 const setResponse = (swaggerSpec, node, requestData, response, dataPath, strict) => {
   // eslint-disable-next-line max-len
+  if (!swaggerSpec.paths[requestData.originalRoute][requestData.method].responses) {
+    swaggerSpec.paths[requestData.originalRoute][requestData.method].responses = {};
+  }
   const responseTypes = swaggerSpec.paths[requestData.originalRoute][requestData.method].responses[response.status];
   const contentType = response.headers['content-type'].split(';')[0];
-  let responseRef = Math.random().toString(36).substring(7);
+  let responseRef = generateResponseRef();
   let { data } = response;
 
   if (!responseTypes) {

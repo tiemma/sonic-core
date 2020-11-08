@@ -325,27 +325,6 @@
     "createBudgetAlert": {
       "alerts": [{ "percentage": 10, "isForecasted": true }]
     },
-    "createBudgetResp": {
-      "id": "33fed62e-11a0-445f-a90a-d8b5c1483306",
-      "name": "Budget",
-      "organizationID": "bbe550ea-d564-4099-a0a5-bb60940529d1",
-      "monthlyDuration": 2,
-      "isPrevMonthCost": false,
-      "amount": 100,
-      "target": "TEAM",
-      "type": "RECURRING",
-      "resourceNames": ["DefaultTeam1"],
-      "startDate": "2020-09-25T12:59:49.166Z",
-      "endDate": "2020-11-25T12:59:49.166Z",
-      "createdAt": "2020-09-25T12:59:49.166Z",
-      "alerts": {
-        "percentages": []
-      },
-      "costs": {
-        "totalCost": 0,
-        "forecastedCost": 0
-      }
-    },
     "getBudgetsResp": {
       "id": "33fed62e-11a0-445f-a90a-d8b5c1483306",
       "name": "Budget",

@@ -15,6 +15,6 @@
     "moduleResolution": "node",
     "noUnusedLocals": true,
     "resolveJsonModule": true,
-    "noUnusedParameters": true
+    "noUnusedParameters": false
   }
 }

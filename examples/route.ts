@@ -11,12 +11,17 @@ import {getResponse} from "../src/middleware";
 const customCss = ".topbar { display: none !important;}";
 
 const swaggerOptions = require("./swagger-config");
-const swaggerSpec = JSON.parse(fs.readFileSync("./dist/swagger.json", { encoding: "utf8" }))
+let swaggerSpec;
+try {
+    swaggerSpec = JSON.parse(fs.readFileSync("./dist/swagger.json", {encoding: "utf8"}))
+} catch(e) {
+    swaggerSpec = {};
+}
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(getResponse(app, swaggerOptions));
+app.use(getResponse(app, swaggerOptions, './dist/swagger.json'));
 
 /**
  * @swagger
@@ -108,21 +113,6 @@ router.get(
  *         "application/json":
  *            schema:
  *              $ref: "#/definitions/createBudget"
- *     responses:
- *       200:
- *         description: Budget created successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/definitions/createBudgetResp'
- *       400:
- *         description: Bad request on budget request
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/definitions/badBudgetResp'
- *       401:
- *         description: Token not provided
  *     parameters:
  *     - name: id
  *       in: path
@@ -175,7 +165,6 @@ router.get("/organizations", (_req: Request, res: Response) => {
  *     description: Gets all clusters for the user's organization
  *     tags:
  *       - Cluster
- *       - External
  *     responses:
  *       200:
  *         description: Clusters retrieved successfully

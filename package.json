@@ -1,6 +1,6 @@
 {
   "name": "swaggerresponse",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Generates the responses for swagger based on pre-filled json responses",
   "main": "index.js",
   "scripts": {

@@ -3,7 +3,6 @@ const debug = require('debug');
 const { dirname, relative } = require('path');
 const {
   blue,
-  white,
 } = require('chalk');
 const { name } = require('../package.json');
 
