@@ -181,6 +181,7 @@ const writeFile = (swaggerSpec,
   }
 
   if (statusCode < 400) {
+    // eslint-disable-next-line max-len
     generateRequestBodySpec(swaggerSpec, route, method, requestBody, contentType, requestDefinitionName);
     generateQueryParameterSpec(swaggerSpec, route, method, query);
   }
@@ -196,13 +197,16 @@ const getResponse = (app, swaggerOptions, swaggerFilePath) => {
   return (req, res, next) => {
     // Set state of routes and definitions on first request
     // Deferred afterwards until a restart is done
-    // eslint-disable-next-line func-names
     const { send } = res;
+    // eslint-disable-next-line func-names
     res.send = function (body) {
       if (req.originalUrl.includes('/api/v1')) {
         const route = res.req.route ? res.req.route.path : req.url;
         const { method } = res.req;
-        const definitionName = definitionMap[replaceRoutes(route)] && definitionMap[replaceRoutes(route)][method] ? definitionMap[replaceRoutes(route)][method][method] : undefined;
+        // eslint-disable-next-line max-len
+        const definitionName = definitionMap[replaceRoutes(route)] && definitionMap[replaceRoutes(route)][method]
+          ? definitionMap[replaceRoutes(route)][method][method]
+          : undefined;
         // logger(res.req.body,
         //   method,
         //   route,
