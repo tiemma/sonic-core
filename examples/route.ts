@@ -6,7 +6,7 @@ const app = express();
 import swaggerUI from "swagger-ui-express";
 import * as fs from "fs";
 
-import {getResponse} from "../src/middleware";
+import {getResponse} from "..";
 
 const customCss = ".topbar { display: none !important;}";
 
