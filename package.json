@@ -1,5 +1,5 @@
 {
-  "name": "swaggerresponse",
+  "name": "@tiemma/swaggerresponse",
   "version": "0.0.1",
   "description": "Generates the responses for swagger based on pre-filled json responses",
   "main": "index.js",
