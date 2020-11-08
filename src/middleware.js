@@ -4,7 +4,7 @@ const { debugLogger } = require('./logger');
 const {
   parseSwaggerRouteData,
   swaggerRef, generateResponseRef, buildSwaggerJSON,
-  getType,
+  getType, DataTypes,
 } = require('./swagger-utils');
 
 const logger = debugLogger(__filename);
@@ -69,6 +69,9 @@ const initSwaggerSchemaParameters = (swaggerSpec, originalRoute, method) => {
 
   const parameterList = swaggerSpec.paths[route][method].parameters;
   const pathList = originalRoute.match(parameterRegex);
+  if (getType(pathList) !== DataTypes.ARRAY) {
+    return;
+  }
   for (const path of pathList) {
     if (findPathParameterIndex(parameterList, path) === false) {
       swaggerSpec.paths[route][method].parameters.push({

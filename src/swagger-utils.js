@@ -281,4 +281,5 @@ module.exports = {
   swaggerRef,
   generateResponseRef,
   getType,
+  DataTypes,
 };
