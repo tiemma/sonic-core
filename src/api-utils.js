@@ -17,6 +17,7 @@ const setResponse = (swaggerSpec, node, requestData, response, dataPath, strict)
   if (!swaggerSpec.paths[requestData.originalRoute][requestData.method].responses) {
     swaggerSpec.paths[requestData.originalRoute][requestData.method].responses = {};
   }
+  // eslint-disable-next-line max-len
   const responseTypes = swaggerSpec.paths[requestData.originalRoute][requestData.method].responses[response.status];
   const contentType = response.headers['content-type'].split(';')[0];
   let responseRef = generateResponseRef();
