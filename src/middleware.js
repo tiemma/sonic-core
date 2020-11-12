@@ -166,7 +166,7 @@ const generateResponseBodySpec = (swaggerSpec,
 const writeFile = (swaggerSpec,
   method, originalRoute, responseBody, res, requestDefinitionName, swaggerFilePath) => {
   const { body: requestBody, query } = res.req;
-  const contentType = res.get('Content-Type').split(';')[0];
+  const contentType = (res.get('Content-Type') || 'text/html').split(';')[0];
   const { statusCode } = res;
   try {
     responseBody = JSON.parse(responseBody);
@@ -189,7 +189,9 @@ const writeFile = (swaggerSpec,
     generateQueryParameterSpec(swaggerSpec, route, method, query);
   }
 
-  generateResponseBodySpec(swaggerSpec, route, method, responseBody, contentType, statusCode);
+  if (statusCode !== 204) {
+    generateResponseBodySpec(swaggerSpec, route, method, responseBody, contentType, statusCode);
+  }
   logger(swaggerSpec);
   writeFileSync(swaggerFilePath, JSON.stringify(swaggerSpec, null, 4));
 };

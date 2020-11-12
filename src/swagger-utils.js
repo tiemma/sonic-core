@@ -52,6 +52,12 @@ const generateResponse = (op, obj) => {
 };
 
 const buildSwaggerJSON = (data) => {
+  if (!Object.keys(DataTypes).includes(getType(data))) {
+    return {
+      type: getType(data),
+      example: data,
+    };
+  }
   const keys = Object.keys(data || {});
   const op = {
     required: keys,

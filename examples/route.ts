@@ -92,7 +92,7 @@ router.get(
 router.get(
     "/budgets/:budgetID",
     (req: Request, res: Response) => {
-        return res.json({"id": req.params.budgetID})
+        return res.send("Data")
     }
 );
 
