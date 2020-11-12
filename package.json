@@ -1,6 +1,6 @@
 {
   "name": "@tiemma/swagger-jsdoc-response",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Generates the responses for swagger based on pre-filled json responses",
   "main": "index.js",
   "scripts": {

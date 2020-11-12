@@ -72,7 +72,7 @@ const initSwaggerSchemaParameters = (swaggerSpec, originalRoute, method) => {
   if (getType(pathList) !== DataTypes.ARRAY) {
     return;
   }
-  for (const path of pathList) {
+  for (const path of (pathList || [])) {
     if (findPathParameterIndex(parameterList, path) === false) {
       swaggerSpec.paths[route][method].parameters.push({
         name: trimString(path),
