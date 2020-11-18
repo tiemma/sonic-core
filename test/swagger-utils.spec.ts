@@ -13,8 +13,8 @@ import {
   parseSwaggerRouteData,
 } from '../src';
 import options from '../examples/swagger-config';
+import { getSpec } from './fixtures';
 
-const expectedSpec = require('./fixtures/spec.json');
 const swaggerSamples = require('../examples/swagger-samples.json');
 
 describe('Swagger utils tests', () => {
@@ -94,7 +94,7 @@ describe('Swagger utils tests', () => {
             },
             target: {
               type: 'string',
-              example: 'CLUSTER',
+              example: 'bigPathName',
             },
             resourceIDs: {
               type: 'array',
@@ -115,7 +115,7 @@ describe('Swagger utils tests', () => {
       status: true,
       data: {
         totalCost: 0,
-        target: 'CLUSTER',
+        target: 'bigPathName',
         resourceIDs: ['1b310f81-e49e-48fa-ae8c-3a7c29ca034e'],
       },
     };
@@ -141,7 +141,7 @@ describe('Swagger utils tests', () => {
           },
           target: {
             type: 'string',
-            example: 'CLUSTER',
+            example: 'bigPathName',
           },
           resourceIDs: {
             type: 'array',
@@ -160,7 +160,7 @@ describe('Swagger utils tests', () => {
       status: true,
       data: {
         totalCost: 0,
-        target: 'CLUSTER',
+        target: 'bigPathName',
         resourceIDs: ['1b310f81-e49e-48fa-ae8c-3a7c29ca034e'],
       },
     };
@@ -213,6 +213,8 @@ describe('Swagger utils tests', () => {
 
   it('parseSwaggerJSON works as expected', () => {
     const swaggerSpec = swaggerJSDoc(options as any);
-    expect(parseSwaggerRouteData(swaggerSpec as any, swaggerSamples)).deep.equal(expectedSpec);
+    const data = parseSwaggerRouteData(swaggerSpec as any, swaggerSamples);
+
+    expect(data).deep.equal(getSpec());
   });
 });

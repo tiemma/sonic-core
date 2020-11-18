@@ -1,37 +1,38 @@
 import { expect } from 'chai';
 import { topologicalDependencySort, dependencyCycleDetection, satisfyDependencyConstraints } from '../src';
-
-const { dependencyGraph } = require('./fixtures/spec.json');
+import { getSpec } from './fixtures';
 
 describe('Graph utils tests', () => {
-  const key = 'Organization';
+  const key = 'man';
 
   it('topologicalDependencySort works as expected', () => {
-    const queue = topologicalDependencySort(dependencyGraph);
+    const data = getSpec();
+    const queue = topologicalDependencySort(data.dependencyGraph);
 
-    expect(queue.getElements()).deep.equal(['Organization', 'OrganizationID', 'Cluster', 'Budget', 'GetBudget']);
+    expect(queue.getElements()).deep.equals(['man', 'dog', 'mouse', 'cat', 'animals']);
   });
 
   it('dependencyCycleDetection works as expected', () => {
-    expect(dependencyCycleDetection(dependencyGraph))
+    const data = getSpec();
+
+    expect(dependencyCycleDetection(data.dependencyGraph))
       .deep.equal({ status: false, stackHistory: [] });
 
-    const data = dependencyGraph;
-    data[key].dependencies.push(key);
-    expect(dependencyCycleDetection(data)).deep.equal({
+    data.dependencyGraph[key].dependencies.push(key);
+    expect(dependencyCycleDetection(data.dependencyGraph)).deep.equal({
       status: true,
       stackHistory: [
-        ['OrganizationID', key, key],
-        ['GetBudget', 'Budget', key],
+        ['dog', key, key],
+        ['cat', 'mouse', key],
       ],
     });
   });
 
   it('satisfyDependencyConstraints works as expected', () => {
-    expect(satisfyDependencyConstraints(dependencyGraph)).deep.equal([]);
+    const data = getSpec();
+    expect(satisfyDependencyConstraints(data.dependencyGraph)).deep.equal([]);
 
-    const data = dependencyGraph;
-    delete data[key];
-    expect(satisfyDependencyConstraints(data)).deep.equal([key]);
+    delete data.dependencyGraph[key];
+    expect(satisfyDependencyConstraints(data.dependencyGraph)).deep.equal([key]);
   });
 });

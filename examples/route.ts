@@ -8,73 +8,66 @@ app.use(express.urlencoded({ extended: true }));
 
 /**
  * @swagger
- * /organizations/{organizationID}:
+ * /animal/{man}/dog:
  *   get:
- *     name: OrganizationID
- *     summary: Get budget
+ *     name: dog
+ *     description: Endpoint for dog under a particular man
  *     tags:
- *       - Budget
+ *       - Dog
  *     responses:
  *       200:
- *         description: Budget retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/definitions/organizationResp'
+ *               $ref: '#/definitions/dog'
  *       401:
  *         description: Token not provided
  *       500:
- *         description: Budget retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/definitions/organizationErrorResp'
+ *               $ref: '#/definitions/dogError500'
  *     parameters:
- *     - name: organizationID
+ *     - name: man
  *       in: path
- *       description: Budget ID
- *       defaultTemplate: $Organization[0].id
+ *       defaultTemplate: $man[0].id
  *       required: true
- *       schema:
- *         $ref: "#/definitions/pathID"
  */
 router.get(
-    "/organizations/:organizationID",
+    "/path/:man",
     (req: Request, res: Response) => {
-        return res.json({"organizationID": req.params.organizationID})
+        return res.json({"man": req.params.man})
     }
 );
 
 
 /**
  * @swagger
- * /budgets/{param}:
+ * /cat/{mouse}:
  *   get:
- *     name: GetBudget
- *     summary: Get budget
+ *     name: cat
+ *     summary: Get mouse
  *     tags:
- *       - Budget
+ *       - mouse
  *     responses:
  *       200:
- *         description: Budget retrieved successfully
+ *         description: mouse retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/definitions/getBudgetResp'
+ *               $ref: '#/definitions/mouseResp'
  *       401:
  *         description: Token not provided
  *     parameters:
- *     - name: param
+ *     - name: mouse
  *       in: path
- *       description: Budget ID
- *       defaultTemplate: $Budget.id
+ *       description: ID
+ *       defaultTemplate: $mouse.id
  *       required: true
- *       schema:
- *         $ref: "#/definitions/pathID"
  */
 router.get(
-    "/budgets/:param",
-    (req: Request, res: Response) => {
+    "/cat/:mouse",
+    (_: Request, res: Response) => {
         return res.send("Data")
     }
 );
@@ -82,85 +75,82 @@ router.get(
 
 /**
  * @swagger
- * /organizations/{id}/budgets:
+ * /mouse/{id}/man:
  *   post:
- *     name: Budget
- *     summary: Create budget
- *     description: Creates a budget under an organization
+ *     name: mouse
+ *     summary: Create mouse
+ *     description: Creates a mouse under a man's house, rhymes with the times dudes
  *     tags:
- *       - Budget
+ *       - mouse
  *     requestBody:
  *       description: Details to authenticate
  *       required: true
  *       content:
  *         "application/json":
  *            schema:
- *              $ref: "#/definitions/createBudget"
+ *              $ref: "#/definitions/createmouse"
  *     parameters:
  *     - name: id
  *       in: path
- *       description: Organization ID
+ *       description: man ID
  *       required: true
- *       defaultTemplate: $Organization[0].id
+ *       defaultTemplate: $man[0].id
  *       schema:
  *         $ref: "#/definitions/pathID"
  */
 router.post(
-    "/organizations/:id/budgets",
+    "/mouse/:id/man",
     (req: Request, res: Response) => {
-        return res.json({"id": req.params.id})
+        return res.json({"id": req.params.id, "body": req.body})
     }
 );
 
 
 /**
  * @swagger
- * /organizations:
+ * /man:
  *   get:
- *     name: Organization
- *     summary: Get organizations
- *     description: Gets all organizations
+ *     name: man
+ *     description: For all men shall find their path in life
  *     tags:
- *       - Organization
+ *       - man
  *     produces: application/json
  *     responses:
  *       200:
- *         description: Organisations retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/definitions/getOrganizationsResp'
+ *               $ref: '#/definitions/manResponds'
  *       401:
  *         description: Token not provided
  *       403:
  *         description: Super Admin privileges required
  */
-router.get("/organizations", (_req: Request, res: Response) => {
+router.get("/path", (_req: Request, res: Response) => {
     return res.json([{"id": "bbe550ea-d564-4099-a0a5-bb60940529d1"}])
 });
 
 /**
  * @swagger
- * /clusters:
+ * /animal:
  *   get:
- *     name: Cluster
- *     summary: Get clusters
- *     description: Gets all clusters for the user's organization
+ *     name: animals
+ *     summary: Get animals
  *     tags:
- *       - Cluster
+ *       - Animals
  *     responses:
  *       200:
- *         description: Clusters retrieved successfully
+ *         description: Animals retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/definitions/getClustersByOrganizationResp'
+ *               $ref: '#/definitions/animalSpeaks'
  *       400:
  *         description: Missing parameter in request body
  *       401:
  *         description: Token not provided
  */
-router.get("/clusters", (_req: Request, res: Response) => {
+router.get("/animal", (_req: Request, res: Response) => {
     return res.json([{"id": "bbe550ea-d564-4099-a0a5-bb60940529d1"}])
 });
 

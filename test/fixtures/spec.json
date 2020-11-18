@@ -1,82 +1,70 @@
 {
     "dependencyGraph": {
-        "OrganizationID": {
+        "dog": {
             "dependencies": [
-                "Organization"
+                "man"
             ],
             "requestData": {
                 "requestBody": {},
-                "apiRoute": "/organizations/$Organization[0].id",
-                "originalRoute": "/organizations/{organizationID}",
+                "apiRoute": "/animal/$man[0].id/dog",
+                "originalRoute": "/animal/{man}/dog",
                 "method": "get"
             }
         },
-        "GetBudget": {
+        "cat": {
             "dependencies": [
-                "Budget"
+                "mouse"
             ],
             "requestData": {
                 "requestBody": {},
-                "apiRoute": "/budgets/$Budget.id",
-                "originalRoute": "/budgets/{param}",
+                "apiRoute": "/cat/$mouse.id",
+                "originalRoute": "/cat/{mouse}",
                 "method": "get"
             }
         },
-        "Budget": {
+        "mouse": {
             "dependencies": [
-                "Organization",
-                "Cluster"
+                "man"
             ],
             "requestData": {
                 "requestBody": {
-                    "budget": {
-                        "name": "Budget",
-                        "amount": 100,
-                        "type": "RECURRING",
-                        "monthlyDuration": 2,
-                        "target": "CLUSTER",
-                        "isPrevMonthCost": true
-                    },
-                    "clusters": [
-                        "$Cluster[0].id"
+                    "key": "value",
+                    "number": 1,
+                    "array": [
+                        "animal"
                     ],
-                    "alerts": {
-                        "emails": [
-                            "me@bakman.build"
-                        ],
-                        "teams": [
-                            "1b310f81-e49e-48fa-ae8c-3a7c29ca034e"
-                        ]
+                    "object": {
+                        "state": "All objects must have state, period with a full stop"
                     }
                 },
-                "apiRoute": "/organizations/$Organization[0].id/budgets",
-                "originalRoute": "/organizations/{id}/budgets",
+                "apiRoute": "/mouse/$man[0].id/man",
+                "originalRoute": "/mouse/{id}/man",
                 "method": "post",
-                "definitionName": "createBudget"
+                "definitionName": "createmouse"
             }
         },
-        "Organization": {
+        "man": {
             "dependencies": [],
             "requestData": {
                 "requestBody": {},
-                "apiRoute": "/organizations",
-                "originalRoute": "/organizations",
+                "apiRoute": "/man",
+                "originalRoute": "/man",
                 "method": "get"
             }
         },
-        "Cluster": {
+        "animals": {
             "dependencies": [],
             "requestData": {
                 "requestBody": {},
-                "apiRoute": "/clusters",
-                "originalRoute": "/clusters",
+                "apiRoute": "/animal",
+                "originalRoute": "/animal",
                 "method": "get"
             }
         }
     },
     "definitionMap": {
-        "/organizations/{id}/budgets": {
-            "POST": "createBudget"
+        "/mouse/{id}/man": {
+            "POST": "createmouse"
         }
     }
 }

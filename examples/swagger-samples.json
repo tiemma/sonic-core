@@ -1,17 +1,10 @@
 {
-  "createBudget": {
-    "budget": {
-      "name": "Budget",
-      "amount": 100,
-      "type": "RECURRING",
-      "monthlyDuration": 2,
-      "target": "CLUSTER",
-      "isPrevMonthCost": true
-    },
-    "clusters": ["$Cluster[0].id"],
-    "alerts": {
-      "emails": ["me@bakman.build"],
-      "teams": ["1b310f81-e49e-48fa-ae8c-3a7c29ca034e"]
+  "createmouse": {
+    "key": "value",
+    "number": 1,
+    "array": ["animal"],
+    "object": {
+      "state": "All objects must have state, period with a full stop"
     }
   }
 }

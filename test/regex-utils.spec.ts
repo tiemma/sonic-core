@@ -68,6 +68,6 @@ describe('Regex utils test', () => {
   });
 
   it('getDependency works as expected', () => {
-    expect(getDependency('$Cluster[0].id')).equal('Cluster');
+    expect(getDependency('$bigPathName[0].id')).equal('bigPathName');
   });
 });
