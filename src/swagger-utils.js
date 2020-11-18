@@ -1,8 +1,13 @@
 const matchAll = require('match-all');
 const safeEval = require('safe-eval');
+const { writeFileSync } = require('fs');
+
 const { debugLogger } = require('./logger');
 const {
-  routeParametersRegex, requestBodyDependencyRegex, getDependency, routeDependencyRegex,
+  routeParametersRegex,
+  requestBodyDependencyRegex,
+  getDependency,
+  routeDependencyRegex,
 } = require('./regex-utils');
 
 const logger = debugLogger(__filename);
@@ -12,10 +17,11 @@ const getType = (obj) => ({}.toString
   .match(/\s([a-zA-Z]+)/)[1]
   .toLowerCase());
 
-const DataTypes = {
+const NonPrimitiveTypes = {
   ARRAY: 'array',
   OBJECT: 'object',
   NULL: 'null',
+  UNDEFINED: 'undefined',
 };
 
 const swaggerRef = (contentType, responseRef, prefix = '#/definitions') => ({
@@ -52,108 +58,323 @@ const generateResponse = (op, obj) => {
 };
 
 const buildSwaggerJSON = (data) => {
-  if (!Object.keys(DataTypes).includes(getType(data))) {
+  if (!Object.values(NonPrimitiveTypes).includes(getType(data))) {
     return {
       type: getType(data),
       example: data,
     };
   }
+
   const keys = Object.keys(data || {});
   const op = {
     required: keys,
     properties: {},
   };
 
-  if (getType(data) === DataTypes.ARRAY) {
-    const { properties } = buildSwaggerJSON(data[0]);
-    op.type = DataTypes.ARRAY;
-    op.items = {
-      type: getType(data[0]),
-      properties,
-    };
-    op.required = Object.keys(properties);
-    op.example = data;
-    return op;
-  }
-
   for (const key of keys) {
     const value = data[key];
-    let typeData = getType(value);
-    const nonSingularTypes = [DataTypes.ARRAY, DataTypes.OBJECT, DataTypes.NULL];
-
-    if (!nonSingularTypes.includes(typeData)) {
-      op.properties[key] = {
-        type: typeData,
-      };
-      op.properties[key].example = value;
-    } else {
-      switch (typeData) {
-        case DataTypes.ARRAY:
-          typeData = getType(data[key][0]);
-          if (typeData === DataTypes.ARRAY) {
-            throw new Error(
-              'Complex object (array of array etc...)',
-              data[key][0],
-            );
-          }
-          if (typeData === DataTypes.OBJECT) {
-            op.properties[key] = {
-              type: DataTypes.ARRAY,
-              items: {
-                type: typeData,
-                properties: buildSwaggerJSON(data[key][0]).properties,
-              },
-            };
-            break;
-          }
+    switch (getType(value)) {
+      case NonPrimitiveTypes.ARRAY:
+        // eslint-disable-next-line no-case-declarations
+        const typeData = getType(value[0]);
+        if (typeData === NonPrimitiveTypes.ARRAY) {
+          throw new Error(`Complex object (array of array etc...)', ${value[0]}`);
+        } else if (typeData === NonPrimitiveTypes.OBJECT) {
           op.properties[key] = {
-            type: DataTypes.ARRAY,
+            type: NonPrimitiveTypes.ARRAY,
+            items: {
+              type: typeData,
+              properties: buildSwaggerJSON(value[0]).properties,
+            },
+            example: value,
+          };
+        } else {
+          op.properties[key] = {
+            type: NonPrimitiveTypes.ARRAY,
             items: {
               type: typeData,
             },
           };
           op.properties[key].example = value;
-          break;
-        case DataTypes.OBJECT:
-          op.properties[key] = buildSwaggerJSON(data[key]);
-          op.properties[key].type = DataTypes.OBJECT;
-          break;
-        default:
-          logger(`skipping ${typeData}`);
-          break;
-      }
+        }
+        break;
+      case NonPrimitiveTypes.OBJECT:
+        op.properties[key] = buildSwaggerJSON(value);
+        op.properties[key].type = NonPrimitiveTypes.OBJECT;
+        break;
+      default:
+        op.properties[key] = {
+          type: getType(value),
+          example: value,
+        };
+        break;
     }
   }
   return op;
 };
 
-const getBodyDependencies = (routes, method, swaggerSpec) => {
-  const allowedBodyRoutes = ['post', 'put'];
-  let definitionName;
-
-  if (allowedBodyRoutes.includes(method) && routes[method].requestBody) {
-    const contentTypes = routes[method].requestBody.content;
-
-    for (const type of Object.keys(contentTypes)) {
-      const definitionRef = contentTypes[type].schema.$ref;
-      const definitionPaths = definitionRef.split('/').slice(1);
-      [definitionName] = definitionPaths.slice(-1);
-      let body = '';
-      if (definitionName) {
-        body = swaggerSpec;
-        for (const path of definitionPaths) {
-          body = body[path];
-        }
-      }
-
-      if (body) {
-        const rawDeps = matchAll(JSON.stringify(body), requestBodyDependencyRegex).toArray();
-        return { dependencies: new Set(rawDeps.map(getDependency)), body, definitionName };
+const findBodyParameterIndexV2 = (parameterList) => {
+  if (getType(parameterList) === NonPrimitiveTypes.ARRAY) {
+    for (let idx = 0; idx < parameterList.length; idx += 1) {
+      if (parameterList[idx].in === 'body') {
+        return idx;
       }
     }
   }
 
-  return { dependencies: [], body: {}, definitionName };
+  return false;
+};
+
+const findPathParameterIndex = (parameterList, key) => {
+  if (getType(parameterList) === NonPrimitiveTypes.ARRAY) {
+    // eslint-disable-next-line no-restricted-syntax
+    for (let idx = 0; idx < parameterList.length; idx += 1) {
+      if (parameterList[idx].in === 'path' && parameterList[idx].name === key) {
+        return idx;
+      }
+    }
+  }
+
+  return false;
+};
+
+const findQueryParameterIndex = (parameterList, key) => {
+  if (getType(parameterList) === NonPrimitiveTypes.ARRAY) {
+    // eslint-disable-next-line no-restricted-syntax
+    for (let idx = 0; idx < parameterList.length; idx += 1) {
+      if (parameterList[idx].in === 'query' && parameterList[idx].name === key) {
+        return idx;
+      }
+    }
+  }
+
+  return false;
+};
+
+const trimString = (path) => (!path.includes('?') ? path.substr(1) : path.substring(1, path.length - 1));
+const replaceRoutes = (route, regex) => route.replace(regex, (x) => `{${trimString(x)}}`);
+
+const initSwaggerSchemaSpecV3 = (swaggerSpec) => {
+  if (!swaggerSpec.components) {
+    swaggerSpec.components = {
+      schemas: {},
+    };
+  }
+  if (!swaggerSpec.components.schemas) {
+    swaggerSpec.components.schemas = {};
+  }
+};
+
+const initSwaggerSchemaSpecV2 = (swaggerSpec) => {
+  if (!swaggerSpec.definitions) {
+    swaggerSpec.definitions = {};
+  }
+};
+
+const initSwaggerPathForRouteAndMethod = (swaggerSpec, route, method) => {
+  if (!swaggerSpec.paths) {
+    swaggerSpec.paths = {
+      [route]: {
+        [method]: {
+        },
+      },
+    };
+  }
+  if (!swaggerSpec.paths[route]) {
+    swaggerSpec.paths[route] = {};
+  }
+  if (!swaggerSpec.paths[route][method]) {
+    swaggerSpec.paths[route][method] = {};
+  }
+  if (!swaggerSpec.paths[route][method].parameters) {
+    swaggerSpec.paths[route][method].parameters = [];
+  }
+
+  // @TODO: remove default init of definitions after fixing issue with using components/schemas
+  if (!swaggerSpec.paths[route][method].definitions) {
+    swaggerSpec.paths[route][method].definitions = [];
+  }
+
+  if (swaggerSpec.openapi) {
+    initSwaggerSchemaSpecV3(swaggerSpec);
+  } else if (swaggerSpec.swagger) {
+    initSwaggerSchemaSpecV2(swaggerSpec);
+  } else {
+    throw new Error('Unknown swagger specification');
+  }
+};
+
+const initSwaggerSchemaParameters = (swaggerSpec, originalRoute, parameterRegex, method) => {
+  const route = replaceRoutes(originalRoute, parameterRegex);
+  initSwaggerPathForRouteAndMethod(swaggerSpec, route, method);
+  const parameterList = swaggerSpec.paths[route][method].parameters;
+  const parameterPathList = originalRoute.match(parameterRegex);
+  if (getType(parameterPathList) !== NonPrimitiveTypes.ARRAY) {
+    return;
+  }
+  for (const path of parameterPathList) {
+    if (findPathParameterIndex(parameterList, path) === false) {
+      swaggerSpec.paths[route][method].parameters.push({
+        name: trimString(path),
+        in: 'path',
+        required: !path.includes('?'),
+      });
+    }
+  }
+};
+
+const generateQueryParameterSpec = (swaggerSpec,
+  route,
+  method,
+  queries) => {
+  const parameterList = swaggerSpec.paths[route][method].parameters;
+  for (const key of Object.keys(queries)) {
+    const pIdx = findQueryParameterIndex(parameterList, key);
+    if (pIdx === false) {
+      swaggerSpec.paths[route][method].parameters.push({
+        name: key,
+        in: 'query',
+        type: getType(queries[key]),
+      });
+    }
+  }
+};
+
+const generateRequestBodySpec = (swaggerSpec,
+  route,
+  method,
+  requestBody,
+  contentType,
+  definitionName) => {
+  if (!Object.keys(requestBody).length) {
+    return;
+  }
+  if (!definitionName) {
+    definitionName = generateResponseRef();
+  }
+  if (swaggerSpec.openapi) {
+    swaggerSpec.paths[route][method].requestBody = swaggerRef(contentType, definitionName);
+    // Deferring from using component schemas cause WTF is the complexity in making this work
+    // I'd revisit at a later time in a more calmer state of mind
+    // swaggerSpec.components.schemas[definitionName] = buildSwaggerJSON(requestBody);
+    swaggerSpec.definitions[definitionName] = buildSwaggerJSON(requestBody);
+  } else if (swaggerSpec.swagger) {
+    const parameterList = swaggerSpec[route][method].parameters;
+    const bodyIndex = findBodyParameterIndexV2(parameterList);
+    if (bodyIndex === false) {
+      swaggerSpec.paths[route][method].parameters.push({ schema: {} });
+    }
+    swaggerSpec.paths[route][method].parameters[bodyIndex].schema.$ref = `#/definitions/${definitionName}`;
+    swaggerSpec.definitions[definitionName] = buildSwaggerJSON(requestBody);
+  } else {
+    throw new Error('Unknown swagger specification');
+  }
+};
+
+const generateResponseBodySpec = (swaggerSpec,
+  route,
+  method,
+  responseBody,
+  contentType,
+  statusCode) => {
+  if (!Object.keys(responseBody).length) {
+    return;
+  }
+  const definitionName = generateResponseRef();
+  if (!swaggerSpec.paths[route][method].responses) {
+    swaggerSpec.paths[route][method].responses = {};
+  }
+
+  if (swaggerSpec.openapi) {
+    const responseSpec = swaggerRef(contentType, definitionName);
+    swaggerSpec.paths[route][method].responses[statusCode] = responseSpec;
+  } else if (swaggerSpec.swagger) {
+    if (!swaggerSpec.paths[route][method].responses[statusCode].schema) {
+      swaggerSpec.paths[route][method].responses[statusCode].schema = {};
+    }
+    swaggerSpec.paths[route][method].responses[statusCode].schema.$ref = `#/definitions/${definitionName}`;
+  } else {
+    throw new Error('Unknown swagger specification');
+  }
+  swaggerSpec.definitions[definitionName] = buildSwaggerJSON(responseBody);
+};
+
+const writeAsSwaggerDocToFile = (swaggerSpec,
+  method,
+  route,
+  parameterRegex,
+  responseBody,
+  requestBody,
+  queries,
+  statusCode,
+  contentType,
+  requestDefinitionName,
+  swaggerFilePath) => {
+  try {
+    responseBody = JSON.parse(responseBody);
+  } catch (e) {
+    logger("Response isn't a JSON object, ignoring parse");
+  }
+  initSwaggerSchemaParameters(swaggerSpec, route, parameterRegex, method);
+
+  if (statusCode < 400) {
+    // eslint-disable-next-line max-len
+    generateRequestBodySpec(swaggerSpec, route, method, requestBody, contentType, requestDefinitionName);
+    generateQueryParameterSpec(swaggerSpec, route, method, queries);
+  }
+
+  if (statusCode !== 204) {
+    generateResponseBodySpec(swaggerSpec, route, method, responseBody, contentType, statusCode);
+  }
+  writeFileSync(swaggerFilePath, JSON.stringify(swaggerSpec, null, 4));
+};
+
+const getBodyDependencies = (routes, method, swaggerSpec) => {
+  const allowedBodyRoutes = ['post', 'put'];
+  let definitionName;
+  const defaultRef = { dependencies: [], body: {}, definitionName };
+  let definitionRef = '';
+
+  if (allowedBodyRoutes.includes(method)) {
+    if (swaggerSpec.openapi) {
+      if (!routes[method].requestBody) {
+        return defaultRef;
+      }
+      const contentTypes = routes[method].requestBody.content;
+      const type = Object.keys(contentTypes)[0];
+
+      definitionRef = contentTypes[type].schema.$ref;
+    } else if (swaggerSpec.swagger) {
+      const bodyIdx = findBodyParameterIndexV2(routes[method].parameters);
+      if (!routes[method].parameters || !bodyIdx) {
+        return defaultRef;
+      }
+
+      definitionRef = routes[method].parameters[bodyIdx].schema.$ref;
+    } else {
+      throw new Error('Unknown swagger specification');
+    }
+
+    // Not necessarily definitions
+    // This fixes the need to manage both swagger 2 or 3 definitions
+    // by traversing the rote definition path in the swagger spec
+    const definitionPaths = definitionRef.split('/').slice(1);
+    [definitionName] = definitionPaths.slice(-1);
+    let body = '';
+    if (definitionName) {
+      body = swaggerSpec;
+      for (const path of definitionPaths) {
+        body = body[path];
+      }
+    }
+
+    if (body) {
+      const rawDeps = matchAll(JSON.stringify(body), requestBodyDependencyRegex).toArray();
+      return { dependencies: new Set(rawDeps.map(getDependency)), body, definitionName };
+    }
+  }
+
+  return defaultRef;
 };
 
 const getParameterDependencies = (route, method, parameters, name, strictMode = false) => {
@@ -164,7 +385,7 @@ const getParameterDependencies = (route, method, parameters, name, strictMode = 
     return { route, dependencies: [] };
   }
 
-  if (getType(parameters) === DataTypes.ARRAY) {
+  if (getType(parameters) === NonPrimitiveTypes.ARRAY) {
     const routeParameters = matchAll(route, routeParametersRegex).toArray();
     parameters.forEach((params) => {
       const template = params[templateKey];
@@ -286,6 +507,13 @@ module.exports = {
   addDefinitions,
   swaggerRef,
   generateResponseRef,
+  generateResponse,
   getType,
-  DataTypes,
+  findBodyParameterIndexV2,
+  findPathParameterIndex,
+  findQueryParameterIndex,
+  writeAsSwaggerDocToFile,
+  replaceRoutes,
+  trimString,
+  NonPrimitiveTypes,
 };

@@ -1,9 +1,14 @@
 const { create } = require('axios');
 const { StatusCodes } = require('http-status-codes');
-const { dependencyCycleDetection, satisfyDependencyConstraints } = require('./graph-utils');
-
 const {
-  parseSwaggerRouteData, evaluateRoute, buildSwaggerJSON, swaggerRef,
+  dependencyCycleDetection,
+  satisfyDependencyConstraints,
+} = require('./graph-utils');
+const {
+  parseSwaggerRouteData,
+  evaluateRoute,
+  buildSwaggerJSON,
+  swaggerRef,
   generateResponseRef,
 } = require('./swagger-utils');
 const { topologicalDependencySort } = require('./graph-utils');
@@ -13,8 +18,9 @@ const cache = {};
 const logger = debugLogger(__filename);
 
 const setResponse = (swaggerSpec, node, requestData, response, dataPath, strict) => {
+  const routeData = swaggerSpec.paths[requestData.originalRoute][requestData.method];
   // eslint-disable-next-line max-len
-  if (!swaggerSpec.paths[requestData.originalRoute][requestData.method].responses) {
+  if (!routeData.responses) {
     swaggerSpec.paths[requestData.originalRoute][requestData.method].responses = {};
   }
   // eslint-disable-next-line max-len

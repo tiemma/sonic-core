@@ -7,14 +7,12 @@
     "experimentalDecorators": true,
     "importHelpers": true,
     "module": "commonjs",
-    "outDir": "dist",
     "removeComments": true,
-    "sourceMap": true,
     "strict": true,
     "target": "es6",
     "moduleResolution": "node",
     "noUnusedLocals": true,
     "resolveJsonModule": true,
-    "noUnusedParameters": false
+    "noUnusedParameters": true
   }
 }

@@ -2,10 +2,9 @@ const version = process.env.VERSION;
 const swaggerDefinition = {
   openapi: '3.0.1',
   info: {
-    title: 'Replex Server',
+    title: 'Demo server',
     version,
-    description:
-            'API documentation describing endpoints and parameters needed to interact with the Replex Server. Sample calls and response included.',
+    description: 'Random description on API related stuff',
   },
   servers: [
     {
@@ -13,17 +12,8 @@ const swaggerDefinition = {
       description: 'Host system path',
     },
   ],
-  definitions: {
-    pathID: {
-      type: 'string',
-      format: 'UUID',
-      required: true,
-    },
-    workload: {
-      type: 'string',
-      required: true,
-    },
-  },
+  definitions: {},
+  paths: {},
   components: {
     securitySchemes: {
       jwt: {
@@ -46,8 +36,7 @@ const options = {
   // import swaggerDefinitions
   swaggerDefinition,
   // path to the API docs
-  // apis: ['/home/bakman/WebstormProjects/server-swagger/**/*.ts'],
-  apis: ['/home/bakman/WebstormProjects/swaggerResponse/examples/route.ts'],
+  apis: ['./examples/route.ts'],
 };
 
 module.exports = options;

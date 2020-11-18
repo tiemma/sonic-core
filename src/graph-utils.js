@@ -99,7 +99,7 @@ const topologicalDependencySort = (dependencyGraph) => {
   Object.keys(dependencyGraph).forEach(() => {
     // Check for nodes with zero in-degrees across each iteration
     // If none are found, there is no solution since all nodes are
-    // cyclically dependant on each other
+    // cyclically dependent on each other
     let cyclic = true;
 
     let node; // Last node with no dependency

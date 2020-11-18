@@ -1,0 +1,82 @@
+{
+    "dependencyGraph": {
+        "OrganizationID": {
+            "dependencies": [
+                "Organization"
+            ],
+            "requestData": {
+                "requestBody": {},
+                "apiRoute": "/organizations/$Organization[0].id",
+                "originalRoute": "/organizations/{organizationID}",
+                "method": "get"
+            }
+        },
+        "GetBudget": {
+            "dependencies": [
+                "Budget"
+            ],
+            "requestData": {
+                "requestBody": {},
+                "apiRoute": "/budgets/$Budget.id",
+                "originalRoute": "/budgets/{param}",
+                "method": "get"
+            }
+        },
+        "Budget": {
+            "dependencies": [
+                "Organization",
+                "Cluster"
+            ],
+            "requestData": {
+                "requestBody": {
+                    "budget": {
+                        "name": "Budget",
+                        "amount": 100,
+                        "type": "RECURRING",
+                        "monthlyDuration": 2,
+                        "target": "CLUSTER",
+                        "isPrevMonthCost": true
+                    },
+                    "clusters": [
+                        "$Cluster[0].id"
+                    ],
+                    "alerts": {
+                        "emails": [
+                            "me@bakman.build"
+                        ],
+                        "teams": [
+                            "1b310f81-e49e-48fa-ae8c-3a7c29ca034e"
+                        ]
+                    }
+                },
+                "apiRoute": "/organizations/$Organization[0].id/budgets",
+                "originalRoute": "/organizations/{id}/budgets",
+                "method": "post",
+                "definitionName": "createBudget"
+            }
+        },
+        "Organization": {
+            "dependencies": [],
+            "requestData": {
+                "requestBody": {},
+                "apiRoute": "/organizations",
+                "originalRoute": "/organizations",
+                "method": "get"
+            }
+        },
+        "Cluster": {
+            "dependencies": [],
+            "requestData": {
+                "requestBody": {},
+                "apiRoute": "/clusters",
+                "originalRoute": "/clusters",
+                "method": "get"
+            }
+        }
+    },
+    "definitionMap": {
+        "/organizations/{id}/budgets": {
+            "POST": "createBudget"
+        }
+    }
+}
