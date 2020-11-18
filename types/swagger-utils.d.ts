@@ -1,14 +1,14 @@
-import {OpenAPI, OpenAPIV2} from "openapi-types";
-import {DependencyGraph} from "./graph-utils";
+import { OpenAPI, OpenAPIV2 } from 'openapi-types';
+import { DependencyGraph } from './graph-utils';
 
 export enum HTTPMethods {
-    GET = "GET",
-    POST = "POST",
-    PUT = "PUT",
-    PATCH = "PATCH",
-    CONNECT = "CONNECT",
-    DELETE = "DELETE",
-    HEAD = "HEAD"
+    GET = 'GET',
+    POST = 'POST',
+    PUT = 'PUT',
+    PATCH = 'PATCH',
+    CONNECT = 'CONNECT',
+    DELETE = 'DELETE',
+    HEAD = 'HEAD'
 }
 
 export interface RequestObject {
@@ -33,7 +33,7 @@ export function addDefinitions(bodyDefinitions: any, swaggerSpec?: OpenAPI.Docum
 
 export function getType(obj: any): string;
 
-export const NonPrimitiveTypes: Record<string, string>
+export const NonPrimitiveTypes: Record<string, string>;
 
 export function swaggerRef(contentType: string, responseRef: string, prefix: string): any;
 
@@ -57,10 +57,11 @@ export function writeAsSwaggerDocToFile(
     route: string,
     parameterRegex: RegExp,
     responseBody: any,
+    requestBody: any,
     queries: Record<string, string>,
     statusCode: number,
     contentType: string,
     requestDefinitionName: string | null,
     swaggerFilePath: string
 ): void;
-//# sourceMappingURL=swagger-utils.d.ts.map
+// # sourceMappingURL=swagger-utils.d.ts.map
