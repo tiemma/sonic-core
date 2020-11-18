@@ -36,7 +36,6 @@
     "eslint-plugin-import": "^2.22.1",
     "express": "^4.17.1",
     "husky": "^4.3.0",
-    "lodash": "^4.17.20",
     "mocha": "^8.2.1",
     "nyc": "^15.1.0",
     "openapi-types": "^7.0.1",
