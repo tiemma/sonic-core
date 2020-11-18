@@ -1,6 +1,6 @@
 {
   "name": "@tiemma/sonic-core",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Core package for the sonic project on swagger documentation",
   "main": "index.js",
   "scripts": {
