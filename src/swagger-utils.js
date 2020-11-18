@@ -65,6 +65,17 @@ const buildSwaggerJSON = (data) => {
     };
   }
 
+  if (getType(data) === NonPrimitiveTypes.ARRAY) {
+    return {
+      type: NonPrimitiveTypes.ARRAY,
+      items: {
+        type: getType(data[0]),
+        properties: buildSwaggerJSON(data[0]).properties,
+      },
+      example: data,
+    };
+  }
+
   const keys = Object.keys(data || {});
   const op = {
     required: keys,
@@ -191,8 +202,8 @@ const initSwaggerPathForRouteAndMethod = (swaggerSpec, route, method) => {
   }
 
   // @TODO: remove default init of definitions after fixing issue with using components/schemas
-  if (!swaggerSpec.paths[route][method].definitions) {
-    swaggerSpec.paths[route][method].definitions = [];
+  if (!swaggerSpec.definitions) {
+    swaggerSpec.definitions = [];
   }
 
   if (swaggerSpec.openapi) {
@@ -301,7 +312,7 @@ const generateResponseBodySpec = (swaggerSpec,
 
 const writeAsSwaggerDocToFile = (swaggerSpec,
   method,
-  route,
+  originalRoute,
   parameterRegex,
   responseBody,
   requestBody,
@@ -315,8 +326,9 @@ const writeAsSwaggerDocToFile = (swaggerSpec,
   } catch (e) {
     logger("Response isn't a JSON object, ignoring parse");
   }
-  initSwaggerSchemaParameters(swaggerSpec, route, parameterRegex, method);
+  initSwaggerSchemaParameters(swaggerSpec, originalRoute, parameterRegex, method);
 
+  const route = replaceRoutes(originalRoute, parameterRegex);
   if (statusCode < 400) {
     // eslint-disable-next-line max-len
     generateRequestBodySpec(swaggerSpec, route, method, requestBody, contentType, requestDefinitionName);
