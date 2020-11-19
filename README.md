@@ -11,7 +11,7 @@ Accelerate your swagger doc experience.
 This project houses the core APIs for a suite of tools on documentation based on Swagger.
 
 # Why do this
-I work at [Replex](replex.io) (shameless plug here) and I got tired of getting tickets to update the swagger documentation which isn't easy or also extremely fun to do.
+I got tired of getting tickets to update the swagger documentation which isn't easy or also extremely fun to do.
 
 So whilst creating a simple handler to record the requests, I started this project.
 
