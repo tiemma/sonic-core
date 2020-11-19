@@ -20,5 +20,8 @@ Like every core API project, this is not usable by you.
 
 It's a base package consumed by other projects which inherit functionality from here.
 
+# Projects using this package
+- [Sonic < express >](https://github.com/Tiemma/sonic-express)
+
 # I found a bug, how can I contribute?
 Open up a PR using the ISSUE TEMPLATE [here](./.github/ISSUE_TEMPLATE/feature_request.md)
