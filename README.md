@@ -4,6 +4,8 @@
 
 Accelerate your swagger doc experience.
 
+![Node.js CI](https://github.com/Tiemma/sonic-core/workflows/Node.js%20CI/badge.svg)
+
 # What does this do?
 This project houses the core APIs for a suite of tools on documentation based on Swagger.
 
