@@ -441,7 +441,7 @@ const addDefinitions = (bodyDefinitions, swaggerSpec = {}) => {
   return swaggerSpec;
 };
 
-const parseSwaggerRouteData = (swaggerSpec, bodyDefinitions, strictMode = true) => {
+const parseSwaggerRouteData = (swaggerSpec, bodyDefinitions, strictMode = false) => {
   logger('Generating JSON object representing decomposed swagger definitions');
   swaggerSpec.definitions = { ...getDefinitions(swaggerSpec), ...bodyDefinitions };
   const { paths } = swaggerSpec;
