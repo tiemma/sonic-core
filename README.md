@@ -4,6 +4,7 @@
 
 Accelerate your swagger doc experience.
 
+![CodeQL](https://github.com/Tiemma/sonic-core/workflows/CodeQL/badge.svg)
 ![Node.js CI](https://github.com/Tiemma/sonic-core/workflows/Node.js%20CI/badge.svg)
 
 # What does this do?
