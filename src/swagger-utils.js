@@ -1,5 +1,4 @@
 const matchAll = require('match-all');
-const safeEval = require('safe-eval');
 const { writeFileSync } = require('fs');
 
 const { debugLogger } = require('./logger');
@@ -422,8 +421,10 @@ const getParameterDependencies = (route, method, parameters, name, strictMode = 
 
 const evaluateRoute = (route, context) => {
   const routeDeps = matchAll(route, routeDependencyRegex).toArray();
+  logger(`Evaluating route with context: ${JSON.stringify(context, null, 4)}`);
   for (const dependency of routeDeps) {
-    const value = safeEval(dependency.slice(1), context);
+    // eslint-disable-next-line no-eval
+    const value = eval(`context.${dependency.slice(1)}`);
     route = route.replace(dependency, value);
   }
 

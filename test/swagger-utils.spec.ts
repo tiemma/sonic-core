@@ -4,6 +4,7 @@ import {
   getType,
   swaggerRef,
   buildSwaggerJSON,
+  evaluateRoute,
   generateResponse,
   findBodyParameterIndexV2,
   findPathParameterIndex,
@@ -216,5 +217,11 @@ describe('Swagger utils tests', () => {
     const data = parseSwaggerRouteData(swaggerSpec as any, swaggerSamples);
 
     expect(data).deep.equal(getSpec());
+  });
+
+  it('evaluateRoute works as expected', () => {
+    const route = '/api/v1/$Organization.id';
+    const context = { Organization: { id: 1 } };
+    expect(evaluateRoute(route, context)).to.equal('/api/v1/1');
   });
 });
