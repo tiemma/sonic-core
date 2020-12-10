@@ -18,8 +18,7 @@
     "axios": "^0.21.0",
     "debug": "^4.2.0",
     "http-status-codes": "^2.1.4",
-    "match-all": "^1.2.6",
-    "safe-eval": "^0.4.1"
+    "match-all": "^1.2.6"
   },
   "devDependencies": {
     "@types/axios": "^0.14.0",
