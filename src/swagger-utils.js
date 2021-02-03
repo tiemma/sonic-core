@@ -23,6 +23,14 @@ const NonPrimitiveTypes = {
   UNDEFINED: 'undefined',
 };
 
+const findRequiredFields = (keys, existingData) => {
+  if (existingData) {
+    const existingKeys = existingData.required;
+    return existingKeys.filter((val) => keys.indexOf(val) !== -1);
+  }
+  return keys;
+};
+
 const swaggerRef = (contentType, responseRef, prefix = '#/definitions') => ({
   content: {
     [contentType]: {
@@ -33,7 +41,16 @@ const swaggerRef = (contentType, responseRef, prefix = '#/definitions') => ({
   },
 });
 
-const generateResponseRef = () => Math.random().toString(36).substring(7);
+const generateResponseRef = (swaggerSpec, route, method, contentType) => {
+  try {
+    const existingResponseRef = swaggerSpec.paths[route][method]
+      .requestBody.content[contentType].schema.$ref;
+    const refWithoutPrefix = existingResponseRef.split('/')[2];
+    return refWithoutPrefix;
+  } catch {
+    return Math.random().toString(36).substring(7);
+  }
+};
 
 const generateResponse = (op, obj) => {
   if (!obj) {
@@ -56,7 +73,7 @@ const generateResponse = (op, obj) => {
   return op;
 };
 
-const buildSwaggerJSON = (data) => {
+const buildSwaggerJSON = (data, existingData = null) => {
   if (!Object.values(NonPrimitiveTypes).includes(getType(data))) {
     return {
       type: getType(data),
@@ -76,9 +93,10 @@ const buildSwaggerJSON = (data) => {
   }
 
   const keys = Object.keys(data || {});
+  const requiredKeys = findRequiredFields(keys, existingData);
   const op = {
-    required: keys,
-    properties: {},
+    required: requiredKeys,
+    properties: existingData ? existingData.properties : {},
   };
 
   for (const key of keys) {
@@ -185,8 +203,7 @@ const initSwaggerPathForRouteAndMethod = (swaggerSpec, route, method) => {
   if (!swaggerSpec.paths) {
     swaggerSpec.paths = {
       [route]: {
-        [method]: {
-        },
+        [method]: {},
       },
     };
   }
@@ -214,7 +231,12 @@ const initSwaggerPathForRouteAndMethod = (swaggerSpec, route, method) => {
   }
 };
 
-const initSwaggerSchemaParameters = (swaggerSpec, originalRoute, parameterRegex, method) => {
+const initSwaggerSchemaParameters = (
+  swaggerSpec,
+  originalRoute,
+  parameterRegex,
+  method,
+) => {
   const route = replaceRoutes(originalRoute, parameterRegex);
   initSwaggerPathForRouteAndMethod(swaggerSpec, route, method);
   const parameterList = swaggerSpec.paths[route][method].parameters;
@@ -224,6 +246,11 @@ const initSwaggerSchemaParameters = (swaggerSpec, originalRoute, parameterRegex,
   }
   for (const path of parameterPathList) {
     if (findPathParameterIndex(parameterList, path) === false) {
+      const parameterAlreadyAdded = swaggerSpec.paths[route][method].parameters.some(
+        (x) => x.name === trimString(path),
+      );
+      if (parameterAlreadyAdded) return;
+
       swaggerSpec.paths[route][method].parameters.push({
         name: trimString(path),
         in: 'path',
@@ -233,10 +260,12 @@ const initSwaggerSchemaParameters = (swaggerSpec, originalRoute, parameterRegex,
   }
 };
 
-const generateQueryParameterSpec = (swaggerSpec,
+const generateQueryParameterSpec = (
+  swaggerSpec,
   route,
   method,
-  queries) => {
+  queries,
+) => {
   const parameterList = swaggerSpec.paths[route][method].parameters;
   for (const key of Object.keys(queries)) {
     const pIdx = findQueryParameterIndex(parameterList, key);
@@ -250,43 +279,58 @@ const generateQueryParameterSpec = (swaggerSpec,
   }
 };
 
-const generateRequestBodySpec = (swaggerSpec,
+const generateRequestBodySpec = (
+  swaggerSpec,
   route,
   method,
   requestBody,
   contentType,
-  definitionName) => {
+  definitionName,
+) => {
   if (!Object.keys(requestBody).length) {
     return;
   }
   if (!definitionName) {
-    definitionName = generateResponseRef();
+    definitionName = generateResponseRef(
+      swaggerSpec,
+      route,
+      method,
+      contentType,
+    );
   }
   if (swaggerSpec.openapi) {
-    swaggerSpec.paths[route][method].requestBody = swaggerRef(contentType, definitionName);
+    swaggerSpec.paths[route][method].requestBody = swaggerRef(
+      contentType,
+      definitionName,
+    );
     // Deferring from using component schemas cause WTF is the complexity in making this work
     // I'd revisit at a later time in a more calmer state of mind
     // swaggerSpec.components.schemas[definitionName] = buildSwaggerJSON(requestBody);
-    swaggerSpec.definitions[definitionName] = buildSwaggerJSON(requestBody);
+    swaggerSpec.definitions[definitionName] = buildSwaggerJSON(
+      requestBody,
+      swaggerSpec.definitions[definitionName],
+    );
   } else if (swaggerSpec.swagger) {
     const parameterList = swaggerSpec[route][method].parameters;
     const bodyIndex = findBodyParameterIndexV2(parameterList);
     if (bodyIndex === false) {
       swaggerSpec.paths[route][method].parameters.push({ schema: {} });
     }
-    swaggerSpec.paths[route][method].parameters[bodyIndex].schema.$ref = `#/definitions/${definitionName}`;
+    swaggerSpec.paths[route][method].parameters[bodyIndex].schema.$ref = definitionName;
     swaggerSpec.definitions[definitionName] = buildSwaggerJSON(requestBody);
   } else {
     throw new Error('Unknown swagger specification');
   }
 };
 
-const generateResponseBodySpec = (swaggerSpec,
+const generateResponseBodySpec = (
+  swaggerSpec,
   route,
   method,
   responseBody,
   contentType,
-  statusCode) => {
+  statusCode,
+) => {
   if (!Object.keys(responseBody).length) {
     return;
   }
@@ -302,14 +346,17 @@ const generateResponseBodySpec = (swaggerSpec,
     if (!swaggerSpec.paths[route][method].responses[statusCode].schema) {
       swaggerSpec.paths[route][method].responses[statusCode].schema = {};
     }
-    swaggerSpec.paths[route][method].responses[statusCode].schema.$ref = `#/definitions/${definitionName}`;
+    swaggerSpec.paths[route][method].responses[
+      statusCode
+    ].schema.$ref = `#/definitions/${definitionName}`;
   } else {
     throw new Error('Unknown swagger specification');
   }
   swaggerSpec.definitions[definitionName] = buildSwaggerJSON(responseBody);
 };
 
-const writeAsSwaggerDocToFile = (swaggerSpec,
+const writeAsSwaggerDocToFile = (
+  swaggerSpec,
   method,
   originalRoute,
   parameterRegex,
@@ -319,23 +366,43 @@ const writeAsSwaggerDocToFile = (swaggerSpec,
   statusCode,
   contentType,
   requestDefinitionName,
-  swaggerFilePath) => {
+  swaggerFilePath,
+) => {
   try {
     responseBody = JSON.parse(responseBody);
   } catch (e) {
     logger("Response isn't a JSON object, ignoring parse");
   }
-  initSwaggerSchemaParameters(swaggerSpec, originalRoute, parameterRegex, method);
+  initSwaggerSchemaParameters(
+    swaggerSpec,
+    originalRoute,
+    parameterRegex,
+    method,
+  );
 
   const route = replaceRoutes(originalRoute, parameterRegex);
   if (statusCode < 400) {
     // eslint-disable-next-line max-len
-    generateRequestBodySpec(swaggerSpec, route, method, requestBody, contentType, requestDefinitionName);
+    generateRequestBodySpec(
+      swaggerSpec,
+      route,
+      method,
+      requestBody,
+      contentType,
+      requestDefinitionName,
+    );
     generateQueryParameterSpec(swaggerSpec, route, method, queries);
   }
 
   if (statusCode !== 204) {
-    generateResponseBodySpec(swaggerSpec, route, method, responseBody, contentType, statusCode);
+    generateResponseBodySpec(
+      swaggerSpec,
+      route,
+      method,
+      responseBody,
+      contentType,
+      statusCode,
+    );
   }
   writeFileSync(swaggerFilePath, JSON.stringify(swaggerSpec, null, 4));
 };
@@ -380,15 +447,28 @@ const getBodyDependencies = (routes, method, swaggerSpec) => {
     }
 
     if (body) {
-      const rawDeps = matchAll(JSON.stringify(body), requestBodyDependencyRegex).toArray();
-      return { dependencies: new Set(rawDeps.map(getDependency)), body, definitionName };
+      const rawDeps = matchAll(
+        JSON.stringify(body),
+        requestBodyDependencyRegex,
+      ).toArray();
+      return {
+        dependencies: new Set(rawDeps.map(getDependency)),
+        body,
+        definitionName,
+      };
     }
   }
 
   return defaultRef;
 };
 
-const getParameterDependencies = (route, method, parameters, name, strictMode = false) => {
+const getParameterDependencies = (
+  route,
+  method,
+  parameters,
+  name,
+  strictMode = false,
+) => {
   let dependencies = [];
   const templateKey = 'defaultTemplate';
 
@@ -442,7 +522,11 @@ const addDefinitions = (bodyDefinitions, swaggerSpec = {}) => {
   return swaggerSpec;
 };
 
-const parseSwaggerRouteData = (swaggerSpec, bodyDefinitions, strictMode = false) => {
+const parseSwaggerRouteData = (
+  swaggerSpec,
+  bodyDefinitions,
+  strictMode = false,
+) => {
   logger('Generating JSON object representing decomposed swagger definitions');
   swaggerSpec.definitions = { ...getDefinitions(swaggerSpec), ...bodyDefinitions };
   const { paths } = swaggerSpec;
