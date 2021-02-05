@@ -13,6 +13,7 @@ import {
   replaceRoutes,
   parseSwaggerRouteData,
   generateResponseRef,
+  generateResponseBodySpec
 } from '../src';
 import options from '../examples/swagger-config';
 import { getSpec } from './fixtures';
@@ -296,5 +297,9 @@ describe('Swagger utils tests', () => {
     const route = '/api/v1/$Organization.id';
     const context = { Organization: { id: 1 } };
     expect(evaluateRoute(route, context)).to.equal('/api/v1/1');
+  });
+
+  it('generateResponseBodySpec should return undefined on empty input', () => {
+    expect(generateResponseBodySpec()).to.equal(undefined);
   });
 });

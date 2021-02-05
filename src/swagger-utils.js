@@ -331,7 +331,7 @@ const generateResponseBodySpec = (
   contentType,
   statusCode,
 ) => {
-  if (!Object.keys(responseBody).length) {
+  if (!responseBody || !Object.keys(responseBody).length) {
     return;
   }
   const definitionName = generateResponseRef();
@@ -613,4 +613,5 @@ module.exports = {
   replaceRoutes,
   trimString,
   NonPrimitiveTypes,
+  generateResponseBodySpec,
 };
