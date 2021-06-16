@@ -37,7 +37,7 @@
     "husky": "^4.3.0",
     "mocha": "^8.2.1",
     "nyc": "^15.1.0",
-    "openapi-types": "^7.0.1",
+    "openapi-types": "~7",
     "swagger-jsdoc": "^4.2.0",
     "ts-node": "^9.0.0",
     "tslib": "^2.0.1",
