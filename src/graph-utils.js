@@ -1,4 +1,4 @@
-const Queue = require('./structures');
+const { Queue } = require('./structures');
 const { debugLogger } = require('./logger');
 
 const logger = debugLogger(__filename);

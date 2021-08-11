@@ -1,10 +1,13 @@
-import {Node} from "./graph-utils";
+// eslint-disable-next-line import/prefer-default-export
+export class Queue {
+    elements: any[];
 
-export = Queue;
-declare class Queue {
-    elements: Node[];
-    enqueue(node: Node): void;
-    dequeue(): Node;
+    getElements(): any[];
+
+    // eslint-disable-next-line no-unused-vars
+    enqueue(node: any): void;
+
+    dequeue(): any;
+
     isEmpty(): boolean;
 }
-//# sourceMappingURL=structures.d.ts.map
