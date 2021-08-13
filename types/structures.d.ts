@@ -1,13 +1,13 @@
 // eslint-disable-next-line import/prefer-default-export
-export class Queue {
-    elements: any[];
+export class Queue<T = any> {
+    elements: T[];
 
-    getElements(): any[];
+    getElements(): T[];
 
     // eslint-disable-next-line no-unused-vars
-    enqueue(node: any): void;
+    enqueue(node: T): void;
 
-    dequeue(): any;
+    dequeue(): T;
 
     isEmpty(): boolean;
 }
